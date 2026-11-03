@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel - Gestão de EHS</title>
+    <link rel="icon" type="image/png" href="/img/favicon (2).png (2).png"/>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/dasboard.css">
+    <style>
+    .linha-clic{cursor:pointer}
+    .linha-clic:hover td{background:#F2F5FC}
+    .linha-clic:focus-visible{outline:2px solid #2E4CA6;outline-offset:-2px}
+    .insp-sec{margin:0 0 18px}
+    .insp-sec > h3{margin:0 0 8px;font-size:15px;color:#233D8C;border-bottom:1px solid #ADB8D9;padding-bottom:4px}
+    .insp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 18px;margin:0}
+    .insp-campo dt{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#6b77a3;margin:0}
+    .insp-campo dd{margin:2px 0 0;font-weight:600;overflow-wrap:anywhere}
+    .ck-grupo{margin:12px 0 4px;font-size:13px;color:#2E4CA6}
+    .ck-lista{list-style:none;margin:0;padding:0}
+    .ck-lista li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:5px 0;border-bottom:1px solid #eef0f7;font-size:14px}
+    .selo.na{background:#e9ebf3;color:#5b6486}
+    .insp-obs{white-space:pre-wrap;background:#F2F2F2;border-radius:8px;padding:10px}
+    .eq-lista{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+    .eq-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #dfe3f1;border-radius:8px;background:#fff}
+    .eq-item.lider{border-color:#2E4CA6;background:#F2F5FC}
+    .eq-avatar{flex:0 0 30px;height:30px;border-radius:50%;background:#2E4CA6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+    .eq-item:not(.lider) .eq-avatar{background:#8e9bc7}
+    .eq-nome{font-weight:600;overflow-wrap:anywhere;line-height:1.2}
+    .eq-nome small{display:block;font-weight:400;font-size:11px;color:#6b77a3;text-transform:uppercase;letter-spacing:.03em}
+    .eq-titulo-nome{color:#2E4CA6;font-weight:600}
+    .eq-login{display:block;font-weight:400;font-size:11px;color:#6b77a3;margin-top:2px;overflow-wrap:anywhere}
+    .eq-sub{margin:16px 0 6px;font-size:13px;font-weight:600;color:#8a6a00;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .eq-sub small{font-weight:400;color:#6b77a3}
+    .eq-item.manual{border-color:#E0B84A;background:#FFF8E1}
+    .eq-item.manual .eq-avatar{background:#C99A00}
+    .eq-tag{display:inline-block;margin-top:2px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:#8a6a00;background:#FCEBB0;border-radius:4px;padding:1px 6px}
+    </style>
+</head>
+<body class="pg-painel">
+    <header class="topo">
+        <div class="topo-conteudo">
+            <a class="logo" href="painel.html">
+                <img src="/img/logo_branco.png" alt="Logotipo">
+            </a>
+            <nav class="menu" aria-label="Principal">
+                <ul>
+                    <li><a href="painel.html" aria-current="page">Painel</a></li>
+                    <li><a href="registrarEhs.html">Registrar EHS</a></li>
+                    <li><a href="acoesCorretivas.html">Ações Corretivas</a></li>
+                    <li><a href="analise.html">Análise de NC</a></li>
+                    <li id="liRegioes" hidden><a href="/controleregiao.html">Controle de Região</a></li>
+                    <li><a href="trocarSenha.html">Alterar senha</a></li>
+                    <li><a href="#" id="sair">Sair</a></li>
+                    <li><span class="usuario" id="usu"></span></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="hero">
+            <div class="hero-txt">
+                <h1>Painel de gestão de EHS</h1>
+                <p>Acompanhe auditorias, não conformidades e o andamento das análises em um só lugar.</p>
+            </div>
+            <div class="hero-selo" aria-hidden="true">🛡️</div>
+        </section>
+        <section class="bloco compacto">
+            <div class="filtros-cab">
+                <h2><span class="tit-ico" aria-hidden="true">🔎</span> Filtros</h2>
+                <button type="button" class="secundario" id="btnLimpar">Limpar filtros</button>
+            </div>
+            <div class="filtros filtros-uma-linha">
+                <div class="campo">
+                    <label for="mes">Mês</label>
+                    <select name="mes" id="mes" data-multi></select>
+                </div>
+                <div class="campo">
+                    <label for="dia">Dia</label>
+                    <input type="date" id="dia" name="dia">
+                </div>
+                <div class="campo">
+                <label for="periodoIni">Período: de</label>
+                <input type="date" id="periodoIni" name="periodoIni">
+                </div>
+                <div class="campo">
+                    <label for="periodoFim">Período: até</label>
+                    <input type="date" id="periodoFim" name="periodoFim">
+                </div>
+                <div class="campo">
+                    <label for="coordenadores">Coordenador</label>
+                    <select name="coordenadores" id="coordenadores" data-multi></select>
+                </div>
+                <div class="campo">
+                    <label for="estado_atuacao">UF</label>
+                    <select name="estado_atuacao" id="estado_atuacao" data-multi></select>
+                </div>
+                <div class="campo">
+                    <label for="tipo_atividade">Tipo de atividade</label>
+                    <select name="tipo_atividade" id="tipo_atividade" data-multi></select>
+                </div>
+                <div class="campo">
+                    <label for="centro_custo">Região</label>
+                    <select name="centro_custo" id="centro_custo" data-multi></select>
+                </div>
+                <div class="campo">
+                    <label for="naoConformes">Não conformes</label>
+                    <select name="naoConformes" id="naoConformes" data-multi></select>
+                </div>
+                <div class="campo">
+                    <label for="itens">Itens verificados</label>
+                    <select name="itens" id="itens" data-multi></select>
+                </div>
+            </div>
+        </section>
+
+        <div class="aviso-an" id="avisoAnalises" role="status" hidden></div>
+        <section class="kpis" aria-label="Indicadores">
+            <div class="kpi">
+                <span class="kpi-ico" aria-hidden="true">✅</span>
+                <div class="kpi-num" id="kpiAuditados">0</div>
+                <div class="kpi-rot">EHS verificados</div>
+                <div class="kpi-sub" id="kpiAuditadosSub"></div>
+            </div>
+            <div class="kpi pend">
+                <span class="kpi-ico" aria-hidden="true">⏳</span>
+                <div class="kpi-num" id="kpiPendentes">0</div>
+                <div class="kpi-rot">EHS pendentes de auditar</div>
+                <div class="kpi-sub" id="kpiPendentesSub"></div>
+            </div>
+        </section>
+        <section class="rankings" aria-label="Rankings de não conformidades" id="rankings"></section>
+        <section class="bloco" aria-live="polite">
+            <div class="lista-cab">
+                <h2><span class="tit-ico" aria-hidden="true">📋</span> Registros de EHS</h2>
+                <span class="contagem" id="contagem"></span>
+            </div>
+            <div class="tabela-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Inspetor</th>
+                            <th>Líder</th>
+                            <th>Coordenador</th>
+                            <th>UF</th>
+                            <th>Projeto</th>
+                            <th>Site</th>
+                            <th>Login Huawei/Nokia</th>
+                            <th>Realização EHS</th>
+                            <th>Situação</th>
+                            <th>Análises</th>
+                            <th>Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaRegistros"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <dialog id="modalDetalhes" aria-labelledby="modalTitulo">
+        <div class="modal-cab">
+            <div>
+                <h2 id="modalTitulo">Inspeção completa</h2>
+                <p id="modalSub"></p>
+            </div>
+            <button type="button" id="btnFechar">Fechar</button>
+        </div>
+        <div class="modal-corpo" id="modalCorpo"></div>
+    </dialog>
+
+    <script src="/script/multiselect.js"></script>
+    <script src="/script/graficos.js"></script>
+    <script>
+    (function(){
+    var s=null;
+    try{s=JSON.parse(localStorage.getItem("ehs.sessao")||sessionStorage.getItem("ehs.sessao")||"null");}catch(e){}
+    if(!s||!s.token){location.replace("index.html");return;}
+    window.SESSAO=s;
+    var u=s.usuario||{};
+    if(u.trocarSenha){location.replace("trocarSenha.html");return;}
+    document.getElementById("usu").textContent=(u.nome||u.login||"")+(u.funcao?" · "+u.funcao:"");
+    document.getElementById("sair").addEventListener("click",function(e){
+        e.preventDefault();
+        try{
+            localStorage.removeItem("ehs.sessao");sessionStorage.removeItem("ehs.sessao");
+            localStorage.removeItem("ehs.cache.equipes"); 
+        }catch(x){}
+        location.replace("index.html");
+    });
+    })();
+    </script>
+    <script src="/script/regioes-acesso.js"></script>
+    <script>
+    const GAS_FUNCAO = 'listarEhs';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzd4DTL994bGqXXTTVrRwghi_4cnX7BBlubQ5yS-YGnAfl_Mir6ZdSm4_w-dZutsa6s/exec';
+    const API_ANALISES_URL = 'https://script.google.com/macros/s/AKfycbwKRYdotWICN38z9EVbhyE4rztl5yMmlDd3li3pl8l3ae-pfRjE8ZoMBkokkted7jTm/exec';
+    const API_EQUIPES_URL = 'https://script.google.com/macros/s/AKfycbxNjPQzn8kTv7-RAPOR8UOOCUJHnAEr-u78lNn-00QUgEgwD2aWGfI-NASbVJCRq0u52w/exec';
+    const LS_EQ = 'ehs.cache.equipes';
+    const LINHA_INICIAL_DADOS = 2;
+    const TOP = 5;
+    const FILTROS = {
+        coordenadores:   'coordenador',
+        estado_atuacao:  'uf',
+        tipo_atividade:  'tipo_ehs',
+        centro_custo:    'centro_custo',
+    };
+    const COLUNAS_EQUIPE = ['instaladores', 'instalador', 'integrantes', 'integrantes_equipe',
+                            'integrantes_json', 'equipe_integrantes', 'membros_equipe'];
+    const REGIOES = {
+        AC:'Norte', AP:'Norte', AM:'Norte', PA:'Norte', RO:'Norte', RR:'Norte', TO:'Norte',
+        AL:'Nordeste', BA:'Nordeste', CE:'Nordeste', MA:'Nordeste', PB:'Nordeste',
+        PE:'Nordeste', PI:'Nordeste', RN:'Nordeste', SE:'Nordeste',
+        DF:'Centro-Oeste', GO:'Centro-Oeste', MT:'Centro-Oeste', MS:'Centro-Oeste',
+        ES:'Sudeste', MG:'Sudeste', RJ:'Sudeste', SP:'Sudeste',
+        PR:'Sul', RS:'Sul', SC:'Sul'
+    };
+    const VALORES_NC = ['nao', 'nc', 'nao conforme', 'nao conformes', 'reprovado', 'false'];
+    const ITENS = {
+        apr: { nome: 'APR', checks: [
+            { nome: 'APR dentro da validade',      v: 'apr_validade',  desc: 'apr_descricao_nc_validade',  sev: 'apr_severidade_validade',  acao: 'apr_acao_validade',  par: 'apr_status_atividade_validade' },
+            { nome: 'APR emitida para este site',  v: 'apr_emitida',   desc: 'apr_descricao_nc_emitida',   sev: 'apr_severidade_emitida',   acao: 'apr_acao_emitida',   par: 'apr_status_atividade_emitida' },
+            { nome: 'Avaliação de riscos preenchida', v: 'apr_avaliacao', desc: 'apr_descricao_nc_avaliacao', sev: 'apr_severidade_avaliacao', acao: 'apr_acao_avaliacao', par: 'apr_avaliacao_status' }
+        ]},
+        epi: { nome: 'EPI/EPC', checks: [
+            { nome: 'Vestimenta e luvas íntegras',            v: 'epi_vestimenta',         desc: 'epi_descricao_nc_vestimenta',         sev: 'epi_severidade_vestimenta',         acao: 'epi_acao_vestimenta',         par: 'epi_status_atividade_vestimenta' },
+            { nome: 'Óculos de proteção',                     v: 'epi_oculos',             desc: 'epi_descricao_nc_oculos',             sev: 'epi_severidade_oculos',             acao: 'epi_acao_oculos',             par: 'epi_status_atividade_oculos' },
+            { nome: 'Capacete (trabalho no solo)',            v: 'epi_capacete_solo',      desc: 'epi_descricao_nc_capacete_solo',      sev: 'epi_severidade_capacete_solo',      acao: 'epi_acao_capacete_solo',      par: 'epi_status_atividade_capacete_solo' },
+            { nome: 'Capacete (trabalho em altura)',          v: 'epi_capacete_altura',    desc: 'epi_descricao_nc_capacete_altura',    sev: 'epi_severidade_capacete_altura',    acao: 'epi_acao_capacete_altura',    par: 'epi_status_atividade_capacete_altura' },
+            { nome: 'Cinturão íntegro e ajustado',            v: 'trabalho_cinturao',      desc: 'trabalho_descricao_nc_cinturao',      sev: 'trabalho_severidade_cinturao',      acao: 'trabalho_acao_cinturao',      par: 'trabalho_status_atividade_cinturao' },
+            { nome: 'Talabarte Y conectado corretamente',    v: 'trabalho_talabarte',     desc: 'trabalho_descricao_nc_talabarte',     sev: 'trabalho_severidade_talabarte',     acao: 'trabalho_acao_talabarte',     par: 'trabalho_status_atividade_talabarte' },
+            { nome: 'Talabarte de posicionamento',            v: 'trabalho_talabarte_posicionamento', desc: 'trabalho_descricao_nc_talabarte_posicionamento', sev: 'trabalho_severidade_talabarte_posicionamento', acao: 'trabalho_acao_talabarte_posicionamento', par: 'trabalho_status_atividade_talabarte_posicionamento' },
+            { nome: 'Linha de vida / trava-quedas',           v: 'trabalho_linhadevida',   desc: 'trabalho_descricao_nc_linhadevida',   sev: 'trabalho_severidade_linhadevida',   acao: 'trabalho_acao_linhadevida',   par: 'trabalho_linhadevida_status' },
+            { nome: 'Kit de resgate no site',                 v: 'trabalho_resgate',       desc: 'trabalho_descricao_nc_resgate',       sev: 'trabalho_severidade_resgate',       acao: 'trabalho_acao_resgate',       par: 'trabalho_status_atividade_resgate' },
+            { nome: 'Capacete homologado, jugular afivelada', v: 'epi_capacete',           desc: 'epi_descricao_nc_capacete',           sev: 'epi_severidade_capecete',           acao: 'epi_acao_capacete',           par: 'epi_status_atividade_capacete' },
+            { nome: 'Sem acessórios fora do padrão',          v: 'epi_acessorios',         desc: 'epi_descricao_nc_acessorios',         sev: 'epi_severidade_acessorios',         acao: 'epi_acao_acessorios',         par: 'epi_status_atividade_acessorios' },
+            { nome: 'Pontos de ancoragem verificados',        v: 'trabalho_ancoragem',     desc: 'trabalho_descricao_nc_ancoragem',     sev: 'trabalho_severidade_ancoragem',     acao: 'trabalho_acao_ancoragem',     par: 'trabalho_status_atividade_ancoragem' }
+        ]},
+        equipe: { nome: 'Equipe e habilitação', checks: [
+            { nome: 'Dois torristas distintos',    v: 'equipe_torrista', desc: 'equipe_descricao_nc_torrista', sev: 'equipe_severidade_torrista', acao: 'equipe_acao_torrista', par: 'equipe_status_atividade_torrista' },
+            { nome: 'NR-35, NR-10 e ASO válidos',  v: 'equipe_nrs_aso',  desc: 'equipe_descricao_nc_nrs_aso',  sev: 'equipe_severidade_nrs_aso',  acao: 'equipe_acao_nrs_aso',  par: 'equipe_status_atividade_nrs_aso' },
+            { nome: 'CNH válida do condutor',      v: 'equipe_cnh',      desc: 'equipe_descricao_nc_cnh',      sev: 'equipe_severidade_cnh',      acao: 'equipe_acao_cnh',      par: 'equipe_status_atividade_cnh' }
+        ]},
+        isolamento: { nome: 'Isolamento de área', checks: [
+            { nome: 'Área isolada e sinalizada', v: 'isolamento_area',   desc: 'isolamento_descricao_nc_',       sev: 'isolamento_severidade',        acao: 'isolamento_acao',        par: 'isolamento_atividade_status' },
+            { nome: 'Banner de isolamento',      v: 'isolamento_banner', desc: 'isolamento_descricao_nc_banner', sev: 'isolamento_severidade_banner', acao: 'isolamento_acao_banner', par: 'isolamento_atividade_status_banner' }
+        ]},
+        veiculo: { nome: 'Veículo', checks: [
+            { nome: 'Pneus em boas condições',         v: 'veiculo_pneu',             desc: 'veiculo_descricao_nc_pneu',             sev: 'veiculo_severidade_pneu',             acao: 'veiculo_acao_pneu',             par: 'veiculo_status_atividade_pneu' },
+            { nome: 'Condições gerais do veículo',     v: 'veiculo_condicoes_gerais', desc: 'veiculo_descricao_nc_condicoes_gerais', sev: 'veiculo_severidade_condicoes_gerais', acao: 'veiculo_acao_condicoes_gerais', par: 'veiculo_status_atividade_condicoes_gerais' },
+            { nome: 'Documentos e itens de segurança', v: 'veiculo_documento',        desc: 'veiculo_descricao_nc_documento',        sev: 'veiculo_severidade_documento',        acao: 'veiculo_acao_documento',        par: 'veiculo_status_atividade_documento' }
+        ]},
+        evidencia: { nome: 'Evidência', checks: [
+            { nome: 'Fotos do kit aberto e fechado', v: 'evidencia_kit_aberto', desc: 'evidencia_descricao_nc_kit_aberto', sev: 'evidencia_severidade_kit_aberto', acao: 'evidencia_acao_kit_aberto', par: 'evidencia_status_atividade_kit_aberto' }
+        ]}
+    };
+    const DADOS_EXEMPLO = [
+        ['data_inspecao','inspetor','lider','equipe','coordenador','uf','projeto','tipo_ehs','resultado_dia','apr_validade','apr_descricao_nc_validade','apr_severidade_validade','apr_acao_validade','apr_status_atividade_validade','epi_capacete','epi_descricao_nc_capacete','epi_severidade_capecete','epi_acao_capacete','epi_status_atividade_capacete','veiculo_pneu','veiculo_descricao_nc_pneu','veiculo_severidade_pneu','veiculo_acao_pneu','veiculo_status_atividade_pneu','centro_custo'],
+        ['Data','Inspetor','Líder','Equipe','Coordenador','UF','Projeto','Tipo','Resultado do dia','APR dentro da validade','Descrição da NC','Severidade','Ação imediata','Atividade paralisada','Capacete','Descrição da NC','Severidade','Ação imediata','Atividade paralisada','Pneus','Descrição da NC','Severidade','Ação imediata','Atividade paralisada','Centro de custo'],
+        ['2026-10-02','Marcos Lima','João Silva','João Silva; Paulo Neri; Caio Mendes','Ana Souza','BA','PRJ-001','Instalação','Reprovado','Não','APR vencida há 3 dias','Alta','Equipe orientada a renovar','Sim','Sim','','','','','Sim','','','','','CC-10'],
+        ['2026-10-05','Marcos Lima','Pedro Alves','Pedro Alves; Davi Rocha','Ana Souza','SE','PRJ-002','Manutenção','Aprovado','Sim','','','','','Sim','','','','','Sim','','','','','CC-11'],
+        ['2026-10-07','Carla Dias','Rafael Costa','Rafael Costa; Tiago Lins; Hugo Reis','Bruno Reis','BA','PRJ-001','Instalação','Reprovado','Sim','','','','','Não','Jugular sem afivelar','Média','Corrigido na hora','Não','Não','Pneu dianteiro careca','Alta','Veículo retido','Sim','CC-10']
+    ];
+    let registros = []; 
+
+    const $ = (id) => document.getElementById(id);
+
+    function matrizParaObjetos(matriz) {
+        const cab = (matriz[0] || []).map(c => String(c).trim());
+        const out = [];
+        matriz.forEach((linha, i) => {
+            if (i < LINHA_INICIAL_DADOS) return;
+            if (!linha.some(c => String(c ?? '').trim() !== '')) return;
+            const o = { _linha: i + 1 };
+            cab.forEach((chave, j) => { if (chave) o[chave] = linha[j] ?? ''; });
+            out.push(o);
+        });
+        return out;
+    }
+    let analises = {}; 
+
+    const regIdDe = (reg) => (!vazio(reg.id) ? String(reg.id).trim() : 'L' + reg._linha);
+    const idNc = (reg, c) => regIdDe(reg) + '|' + c.v;
+
+    function analisesParaMapa(matriz) {
+        const mapa = {};
+        matrizParaObjetos([matriz[0] || [], [], ...matriz.slice(1)]).forEach(o => {
+            const k = String(o.nc_id ?? '').trim();
+            if (k) mapa[k] = o;
+        });
+        return mapa;
+    }
+    function getAnalise(reg, c) {
+        const direto = analises[idNc(reg, c)];
+        if (direto) return direto;
+        const rid = regIdDe(reg);
+        return Object.values(analises).find(a =>
+            String(a.registro_id ?? '').trim() === rid &&
+            String(a.nc_id ?? '').trim().endsWith('|' + c.v)) || null;
+    }
+    function statusAnalise(reg, c) {
+        const a = getAnalise(reg, c) || {};
+        const r = !vazio(a.raiz), s = !vazio(a.solucao);
+        return r && s ? 'concluida' : (r || s ? 'andamento' : 'pendente');
+    }
+    const ROTULO_STATUS = { concluida: 'Análise concluída', andamento: 'Análise em andamento', pendente: 'Análise pendente' };
+
+    function avisar(msg) {
+        const el = $('avisoAnalises');
+        el.textContent = msg || '';
+        el.hidden = !msg;
+    }
+    const LS_AN = 'ehs.cache.analises';
+    async function fetchJson(url, tentativas = 3) {
+        let ultimo;
+        for (let i = 0; i < tentativas; i++) {
+            try {
+                const r = await fetch(url);
+                return JSON.parse(await r.text());
+            } catch (e) {
+                ultimo = e;
+                await new Promise(res => setTimeout(res, 1000 * (i + 1)));
+            }
+        }
+        throw ultimo;
+    }
+    async function carregarAnalises() {
+        if (!API_ANALISES_URL || API_ANALISES_URL.startsWith('COLE_AQUI')) return null;
+        try {
+            const j = await fetchJson(API_ANALISES_URL + '?acao=analises');
+            if (!j.ok) throw new Error(j.erro || 'Falha ao ler as análises');
+            const cab = (j.dados[0] || []).map(c => String(c).trim());
+            if (!cab.includes('nc_id')) {
+                throw new Error('a URL de análises não devolveu a aba ANALISES. Reimplante o script em Implantar > Gerenciar implantações > Nova versão.');
+            }
+            try { localStorage.setItem(LS_AN, JSON.stringify(j.dados)); } catch (e) {}
+            avisar('');
+            return analisesParaMapa(j.dados);
+        } catch (err) {
+            console.warn('Não foi possível carregar as análises:', err);
+            if (!Object.keys(analises).length)
+                avisar('Não foi possível carregar a causa raiz e a solução salvas. Tente recarregar a página.');
+            return null;
+        }
+    }
+    let equipesApi = [];      
+    let equipesTentou = false;    
+    let equipesPromessa = null;
+    let idxAberto = null;         
+
+    try {
+        const c = JSON.parse(localStorage.getItem(LS_EQ) || 'null');
+        if (Array.isArray(c) && c.length) equipesApi = c;
+    } catch (e) {}
+
+    function carregarEquipesApi() {
+        if (equipesPromessa) return equipesPromessa;
+        equipesPromessa = fetchJson(API_EQUIPES_URL + '?action=colaboradores')
+            .then(j => {
+                if (!j.ok) throw new Error(j.erro || 'Falha ao ler as equipes');
+                equipesApi = j.dados || [];
+                try { localStorage.setItem(LS_EQ, JSON.stringify(equipesApi)); } catch (e) {}
+            })
+            .catch(err => { console.warn('Não foi possível carregar as equipes:', err); })
+            .finally(() => { equipesTentou = true; });
+        return equipesPromessa;
+    }
+    function equipeDaApi(reg) {
+        if (!equipesApi.length) return null;
+        const nomeEq = semAcento(reg.equipe);
+        const login  = semAcento(reg.login_isdp || reg.login);
+        const lider  = semAcento(reg.lider);
+        const recs = (e) => e.recursos || [];
+        let e = nomeEq && equipesApi.find(x => semAcento(x.equipe) === nomeEq);
+        if (!e && login) e = equipesApi.find(x => recs(x).some(r =>
+            semAcento(r.loginHuawei) === login || semAcento(r.loginNokia) === login));
+        if (!e && lider) e = equipesApi.find(x => recs(x).some(r => semAcento(r.nome) === lider));
+        return e || null;
+    }
+    function carregarMatriz() {
+        return new Promise((resolve, reject) => {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[GAS_FUNCAO]();
+            } else if (API_URL && !API_URL.startsWith('COLE_AQUI')) {
+                fetch(API_URL)
+                    .then(r => r.json())
+                    .then(j => {
+                        if (Array.isArray(j)) return resolve(j);
+                        if (!j.ok) return reject(new Error(j.erro || 'Falha ao ler a planilha'));
+                        resolve(j.dados);
+                    })
+                    .catch(reject);
+            } else {
+                console.warn('API_URL não configurada: usando dados de exemplo.');
+                resolve(DADOS_EXEMPLO);
+            }
+        });
+    }
+    const semAcento = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const vazio = (s) => String(s ?? '').trim() === '';
+    const z2 = (n) => String(n).padStart(2, '0');
+    function diaDoRegistro(v) {
+        if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + z2(v.getMonth() + 1) + '-' + z2(v.getDate());
+        const s = String(v ?? '').trim();
+        if (!s) return '';
+        if (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/i.test(s)) {
+            const d = new Date(s);
+            if (!isNaN(d)) return d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate());
+        }
+        let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return m[1] + '-' + m[2] + '-' + m[3];
+        m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m) return m[3] + '-' + z2(m[2]) + '-' + z2(m[1]);
+        return '';
+    }
+    const mesDoRegistro = (v) => diaDoRegistro(v).slice(0, 7);      
+    const rotuloMes = (m) => m ? m.slice(5) + '/' + m.slice(0, 4) : '';
+    const rotuloDia = (d) => d ? d.slice(8) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '';
+    const formatarData = (v) => { const d = diaDoRegistro(v); return d ? rotuloDia(d) : String(v ?? ''); };
+    const chaveData = (v) => Number(diaDoRegistro(v).replace(/-/g, '')) || 0;
+    const hojeISO = () => diaDoRegistro(new Date());
+    function checkEhNc(reg, c) {
+        return VALORES_NC.includes(semAcento(reg[c.v])) || !vazio(reg[c.desc]);
+    }
+    function ncsDoRegistro(reg, grupos) {
+        const lista = [];
+        (grupos && grupos.length ? grupos : Object.keys(ITENS)).forEach(g => {
+            if (!ITENS[g]) return; 
+            ITENS[g].checks.forEach(c => {
+                if (checkEhNc(reg, c)) lista.push({ grupo: g, check: c });
+            });
+        });
+        return lista;
+    }
+    function gruposSelecionados() {
+        return MS.valores($('itens'));
+    }
+
+    function montarSelects() {
+        Object.entries(FILTROS).forEach(([id, coluna]) => {
+            const valores = [...new Set(registros.map(r => String(r[coluna] ?? '').trim()).filter(Boolean))].sort();
+            $(id).innerHTML = '<option value="">Todos</option>' +
+                valores.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+        });
+
+        const meses = [...new Set(registros.map(r => mesDoRegistro(r.data_inspecao)).filter(Boolean))].sort().reverse();
+        $('mes').innerHTML = '<option value="">Todos</option>' +
+            meses.map(m => `<option value="${m}">${rotuloMes(m)}</option>`).join('');
+
+        $('naoConformes').innerHTML =
+            '<option value="">Todos</option>' +
+            '<option value="com">Somente com não conformidade</option>' +
+            '<option value="sem">Somente sem não conformidade</option>';
+
+        $('itens').innerHTML = '<option value="">Todos</option>' +
+            Object.entries(ITENS).map(([g, o]) => `<option value="${g}">${esc(o.nome)}</option>`).join('');
+    }
+
+    function filtrar() {
+        const grupos = gruposSelecionados();
+        const meses = MS.valores($('mes'));
+        const dia = $('dia').value;
+        const nc = MS.valores($('naoConformes'));
+        const querCom = nc.includes('com'), querSem = nc.includes('sem');
+        let ini = $('periodoIni').value, fim = $('periodoFim').value;
+        if (ini && fim && ini > fim) [ini, fim] = [fim, ini];   // se inverteu as datas, corrige
+        return registros.filter(r => {
+            if (meses.length && !meses.includes(mesDoRegistro(r.data_inspecao))) return false;
+            if (dia && diaDoRegistro(r.data_inspecao) !== dia) return false;
+            if (ini || fim) {
+                const d = diaDoRegistro(r.data_inspecao);
+                if (!d) return false;
+                if (ini && d < ini) return false;
+                if (fim && d > fim) return false;
+            }
+            
+            for (const [id, coluna] of Object.entries(FILTROS)) {
+                const escolhidos = MS.valores($(id));
+                if (escolhidos.length && !escolhidos.includes(String(r[coluna] ?? '').trim())) return false;
+            }
+
+            const qtd = totalNcs(r, grupos);
+
+            if (grupos.length && qtd === 0) return false;
+            if (querCom && !querSem && qtd === 0) return false;
+            if (querSem && !querCom && qtd > 0) return false;
+            return true;
+        });
+    }
+    function rankear(lista, grupos, chaveFn) {
+        const mapa = new Map();
+        lista.forEach(r => {
+            ncsDoRegistro(r, grupos).forEach(n => {
+                const c = chaveFn(r, n);
+                if (!c) return;
+                let e = mapa.get(c.k);
+                if (!e) { e = { label: c.label, sub: c.sub || '', nc: 0, regs: new Set() }; mapa.set(c.k, e); }
+                e.nc++;
+                e.regs.add(r._i);
+            });
+        });
+        return [...mapa.values()]
+            .sort((a, b) => b.nc - a.nc || b.regs.size - a.regs.size || a.label.localeCompare(b.label))
+            .slice(0, TOP);
+    }
+    const porColuna = (col) => (r) => {
+        const v = String(r[col] ?? '').trim();
+        return { k: v || '—', label: v || '(não informado)' };
+    };
+    const RANKINGS = [
+        { ico: '⚠️', titulo: 'Maiores problemas de NC',     sub: 'Itens com mais não conformidades',
+          fn: (r, n) => ({ k: n.grupo + '|' + n.check.v, label: n.check.nome, sub: ITENS[n.grupo].nome }) },
+        { ico: '👷', titulo: 'Equipes com mais problemas',  sub: 'Por líder', fn: porColuna('lider') },
+        { ico: '🧭', titulo: 'Coordenações com mais problemas', sub: 'Por coordenador', fn: porColuna('coordenador') },
+        { ico: '🗺️', titulo: 'Regiões com mais problemas',  sub: 'Região derivada da UF',
+          fn: (r) => { const uf = String(r.uf ?? '').trim().toUpperCase(); const g = REGIOES[uf] || '(não informada)'; return { k: g, label: g }; } },
+        { ico: '📅', titulo: 'Meses com mais problemas',    sub: 'Pela data da inspeção',
+          fn: (r) => { const m = mesDoRegistro(r.data_inspecao); return { k: m || '—', label: m ? rotuloMes(m) : '(sem data)' }; } },
+        { ico: '📍', titulo: 'Estados (UF) com mais problemas', sub: 'Por UF', fn: porColuna('uf') },
+        { ico: '🛠️', titulo: 'Tipos de atividade com mais problemas', sub: 'Por tipo de EHS', fn: porColuna('tipo_ehs') }
+    ];
+    function htmlRanking(rk, lista, grupos) {
+        const itens = rankear(lista, grupos, rk.fn);
+        const max = itens.length ? itens[0].nc : 1;
+        const corpo = itens.length ? `<ol class="rk">${itens.map((e, i) => `
+            <li>
+                <span class="rk-pos">${i + 1}</span>
+                <span class="rk-nome" title="${esc(e.label)}">${esc(e.label)}${e.sub ? `<small>${esc(e.sub)}</small>` : ''}</span>
+                <span class="rk-val">${e.nc} NC<small>${e.regs.size} ${e.regs.size === 1 ? 'registro' : 'registros'}</small></span>
+                <span class="rk-barra"><i style="width:${Math.max(4, Math.round(e.nc / max * 100))}%"></i></span>
+            </li>`).join('')}</ol>`
+            : '<div class="rk-vazio">Sem não conformidades nesta seleção.</div>';
+        return `<section class="bloco rk-card"><div class="rk-cab"><span class="rk-ico" aria-hidden="true">${rk.ico}</span><div><h2>${esc(rk.titulo)}</h2><p class="rk-sub">${esc(rk.sub)}</p></div></div>${corpo}</section>`;
+    }
+    function renderDashboard(lista, grupos) {
+        const dia = $('dia').value;
+        const meses = MS.valores($('mes'));
+        const pIni = $('periodoIni').value, pFim = $('periodoFim').value;
+        let base, rot;
+        if (dia) {
+            base = lista.filter(r => diaDoRegistro(r.data_inspecao) === dia);
+            rot = dia === hojeISO() ? 'Hoje' : rotuloDia(dia);
+        } else if (pIni || pFim) {
+            base = lista;
+            rot = pIni && pFim ? rotuloDia(pIni) + ' a ' + rotuloDia(pFim)
+                : pIni ? 'A partir de ' + rotuloDia(pIni)
+                : 'Até ' + rotuloDia(pFim);
+        } else if (meses.length) {
+            base = lista;
+            rot = meses.slice().sort().map(rotuloMes).join(', ');
+        } else {
+            const h = hojeISO();
+            base = lista.filter(r => diaDoRegistro(r.data_inspecao) === h);
+            rot = 'Hoje';
+        }
+        const comNc = base.filter(r => totalNcs(r, grupos) > 0).length;
+        const pend = base.filter(r =>
+            ncsDoRegistro(r, grupos).some(n => statusAnalise(r, n.check) !== 'concluida')).length;
+
+        $('kpiAuditados').textContent = base.length;
+        $('kpiAuditadosSub').textContent = rot + ' · ' + comNc + ' com NC · ' + (base.length - comNc) + ' conformes';
+        $('kpiPendentes').textContent = pend;
+        $('kpiPendentesSub').textContent = rot + ' · NC sem causa raiz e solução concluídas';
+
+        $('rankings').innerHTML = RANKINGS.map(rk => htmlRanking(rk, lista, grupos)).join('');
+        if (window.renderGraficos) renderGraficos(lista, grupos);
+    }
+    function celulaAnalises(r, ncs) {
+        if (!ncs.length) return '—';
+        const total = ncs.length;
+        const feitas = ncs.filter(n => statusAnalise(r, n.check) === 'concluida').length;
+        const parciais = ncs.filter(n => statusAnalise(r, n.check) === 'andamento').length;
+        const classe = feitas === total ? 'concluida' : (feitas || parciais ? 'andamento' : 'pendente');
+        const rotulo = feitas === total ? 'Concluídas' : (feitas || parciais ? 'Em andamento' : 'Pendentes');
+        return `<span class="an-resumo">
+            <span class="selo ${classe}">${rotulo} · ${feitas}/${total}</span>
+            <span class="an-prog" title="${feitas} de ${total} análises concluídas"><i style="width:${Math.round(feitas / total * 100)}%"></i></span>
+        </span>`;
+    }
+    function render() {
+        const grupos = gruposSelecionados();
+        const filtrados = filtrar();
+        renderDashboard(filtrados, grupos);
+        const lista = filtrados.slice().sort((a, b) =>
+            chaveData(b.data_inspecao) - chaveData(a.data_inspecao) ||
+            String(b.criado_em ?? '').localeCompare(String(a.criado_em ?? '')) ||
+            b._linha - a._linha
+        );
+        const tbody = $('listaRegistros');
+        $('contagem').textContent = lista.length + (lista.length === 1 ? ' registro' : ' registros');
+        if (!lista.length) {
+            tbody.innerHTML = '<tr><td colspan="12" class="vazio">Nenhum registro encontrado com esses filtros.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = lista.map(r => {
+            const ncs = ncsDoRegistro(r, grupos);
+            const qtdNc = totalNcs(r, grupos);
+            const situacao = qtdNc
+                ? `<span class="selo nc">${qtdNc} NC</span>`
+                : '<span class="selo ok">Conforme</span>';
+            const botao = `<button type="button" class="btn-detalhes">Ver inspeção</button>`;
+            return `<tr class="linha-clic" data-idx="${r._i}" tabindex="0" title="Clique para ver a inspeção completa">
+                <td>${esc(formatarData(r.data_inspecao))}</td>
+                <td>${esc(r.inspetor)}</td>
+                <td>${esc(r.lider)}</td>
+                <td>${esc(r.coordenador)}</td>
+                <td>${esc(r.uf)}</td>
+                <td>${esc(r.projeto)}</td>
+                <td>${esc(r.site)}</td>
+                <td>${esc(r.login_isdp || r.login)}</td>
+                <td>${esc(r.resultado_dia)}</td>
+                <td>${situacao}</td>
+                <td>${celulaAnalises(r, ncs)}</td>
+                <td>${botao}</td>
+            </tr>`;
+        }).join('');
+    }
+    const DEBUG = new URLSearchParams(location.search).has('debug');
+
+    function blocoAnalise(reg, c) {
+        const achada = getAnalise(reg, c);
+        const a = achada || {};
+        const debug = DEBUG && !achada
+            ? `<small style="color:#6b77a3;overflow-wrap:anywhere">DEBUG — procurando nc_id: <b>${esc(idNc(reg, c))}</b><br>nc_id salvos na planilha (${Object.keys(analises).length}): ${esc(Object.keys(analises).slice(0, 15).join('  ,  ') || 'nenhum')}</small>`
+            : '';
+        const raiz = !vazio(a.raiz) ? esc(a.raiz) : '<em>Ainda não definida</em>';
+        const sol = !vazio(a.solucao) ? esc(a.solucao) : '<em>Ainda não definida</em>';
+        return `<div class="nc-analise">
+            <div class="an-item raiz"><span class="an-rotulo">Causa raiz</span>${raiz}</div>
+            <div class="an-item sol"><span class="an-rotulo">Solução a ser feita</span>${sol}</div>
+            ${vazio(a.raiz) && vazio(a.solucao) ? '<a href="analise.html">Abrir análise dos 5 porquês</a>' : ''}
+            ${debug}
+        </div>`;
+    }
+    const fmtDH = (v) => {
+        if (vazio(v)) return '';
+        if (v instanceof Date && !isNaN(v))
+            return z2(v.getDate()) + '/' + z2(v.getMonth() + 1) + '/' + v.getFullYear() + ' ' + z2(v.getHours()) + ':' + z2(v.getMinutes());
+        const s = String(v).trim();
+        let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/); 
+        if (m) return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
+        if (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/i.test(s)) {                             
+            const d = new Date(s);
+            if (!isNaN(d)) return fmtDH(d);
+        }
+        m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T](\d{1,2}):(\d{2})/);
+        if (m) return `${z2(m[1])}/${z2(m[2])}/${m[3]} ${z2(m[4])}:${m[5]}`;
+        return s;
+    };
+
+    const ROT_RESULTADO = { REALIZADO: 'EHS realizado', SEM_ATIVIDADE: 'Sem atividade', SEM_EHS: 'Atividade sem EHS' };
+    const ROT_TIPO = { TORRE: 'Torre', SOLO: 'Solo', TORREESOLO: 'Torre e Solo' };
+    const ROT_SEV = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' };
+    const ROT_CAT = { APR: 'APR', EPI: 'EPI/EPC', ALTURA: 'Trabalho em altura', EQUIPE: 'Equipe e habilitação',
+        AREA: 'Isolamento de área', VEICULO: 'Veículo', EVIDENCIA: 'Evidências (fotos)', PROCESSO: 'Processo EHS', OUTRO: 'Outros' };
+    const rotSimNao = (v) => { const s = semAcento(v); return s === 'sim' ? 'Sim' : (s === 'nao' ? 'Não' : (v || '')); };
+
+    const campo = (rot, val) =>
+        `<div class="insp-campo"><dt>${esc(rot)}</dt><dd>${vazio(val) ? '—' : esc(val)}</dd></div>`;
+    const pareceLista = (s) => /[;|\n]/.test(s) || /^[\[{]/.test(s);
+    function pessoasDeValor(v) {
+        if (v === null || v === undefined) return [];
+        if (Array.isArray(v)) return v.flatMap(pessoasDeValor);
+        if (typeof v === 'object') {
+            const nome = String(v.nome ?? v.name ?? v.instalador ?? '').trim();
+            const login = String(v.login ?? v.login_isdp ?? v.huawei ?? '').trim();
+            return nome ? [{ nome, login }] : [];
+        }
+        const s = String(v).trim();
+        if (!s) return [];
+        if (/^[\[{]/.test(s)) {
+            try { return pessoasDeValor(JSON.parse(s)); } catch (e) {}
+        }
+        return s.split(/[;|\n,]+/).map(x => x.trim()).filter(Boolean).map(x => {
+            const m = x.match(/^(.*?)\s*\(([^)]+)\)\s*$/);      // "Nome (login)"
+            return m ? { nome: m[1].trim(), login: m[2].trim() } : { nome: x, login: '' };
+        });
+    }
+
+    function integrantesDoRegistro(reg, eqManual) {
+        const vistos = new Map();
+        const pessoas = [];
+        const add = (nome, papel, login) => {
+            const n = String(nome ?? '').trim();
+            const k = semAcento(n);
+            if (!n) return;
+            if (vistos.has(k)) {                      
+                const p = vistos.get(k);
+                if (!p.login && login) p.login = String(login).trim();
+                return;
+            }
+            const p = { nome: n, papel, login: String(login ?? '').trim() };
+            vistos.set(k, p);
+            pessoas.push(p);
+        };
+        const lider = String(reg.lider ?? '').trim();
+        if (lider) add(lider, 'Líder', reg.login_isdp || reg.login);
+        const eqApi = equipeDaApi(reg);
+        let equipeNome = eqApi ? String(eqApi.equipe ?? '').trim() : '';
+        const eqRaw = String(reg.equipe ?? '').trim();
+        if (!equipeNome && eqRaw) {
+            if (pareceLista(eqRaw)) pessoasDeValor(eqRaw).forEach(p => add(p.nome, 'Instalador', p.login));
+            else equipeNome = eqRaw;
+        }
+        if (eqApi) {
+            (eqApi.recursos || []).forEach(r => {
+                const funcao = String(r.funcao ?? '').trim();
+                const papel = semAcento(funcao) === 'lider'
+                    ? 'Líder'
+                    : (funcao ? funcao.charAt(0).toUpperCase() + funcao.slice(1).toLowerCase() : 'Instalador');
+                add(r.nome, papel, r.loginHuawei || r.loginNokia);
+            });
+        }
+        const manuais = [];
+        const vistosMan = new Set();
+        pessoasDeValor(eqManual).forEach(p => {
+            const k = semAcento(p.nome);
+            if (!k || vistosMan.has(k)) return;
+            vistosMan.add(k);
+            const cad = vistos.get(k);
+            manuais.push({ nome: p.nome, papel: 'Instalador', login: p.login || (cad ? cad.login : ''), noCadastro: !!cad });
+        });
+        if (!eqApi) {
+            const colunas = new Set(COLUNAS_EQUIPE.map(semAcento));
+            Object.keys(reg).forEach(k => {
+                const kn = semAcento(k);
+                if (kn === 'equipe') return;
+                if (kn === 'integrantesnoehs') {  
+                    const v = String(reg[k] ?? '').trim();
+                    if (v && !/^\d+$/.test(v)) pessoasDeValor(v).forEach(p => add(p.nome, 'Instalador', p.login));
+                    return;
+                }
+                if (colunas.has(kn) || /^(instalador|integrante|membro)/.test(kn)) {
+                    pessoasDeValor(reg[k]).forEach(p => add(p.nome, 'Instalador', p.login));
+                }
+            });
+        }
+        return { equipeNome, pessoas, manuais };
+    }
+    const iniciais = (nome) => nome.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+    function htmlEquipe(eq) {
+        const integrantes = eq.pessoas, equipeNome = eq.equipeNome, manuais = eq.manuais || [];
+        if (!integrantes.length && !equipeNome && !manuais.length) return '';
+        const instaladores = integrantes.filter(i => i.papel !== 'Líder').length;
+        const cadastro = `<section class="insp-sec"><h3>Equipe${equipeNome ? ' · <span class="eq-titulo-nome">' + esc(equipeNome) + '</span>' : ''}
+            (${integrantes.length} ${integrantes.length === 1 ? 'integrante' : 'integrantes'}${instaladores ? ' · ' + instaladores + (instaladores === 1 ? ' instalador' : ' instaladores') : ''})</h3>
+            <ul class="eq-lista">${integrantes.map(i => `
+                <li class="eq-item${i.papel === 'Líder' ? ' lider' : ''}">
+                    <span class="eq-avatar" aria-hidden="true">${esc(iniciais(i.nome))}</span>
+                    <span class="eq-nome">${esc(i.nome)}<small>${esc(i.papel)}</small>${i.login ? `<span class="eq-login">Login: ${esc(i.login)}</span>` : ''}</span>
+                </li>`).join('')}
+            </ul>`;
+        const manual = manuais.length ? `
+            <div class="eq-sub">Equipe informada manualmente (${manuais.length} ${manuais.length === 1 ? 'integrante' : 'integrantes'})
+                <small>o inspetor marcou que o cadastro da equipe não estava correto</small></div>
+            <ul class="eq-lista">${manuais.map(i => `
+                <li class="eq-item manual">
+                    <span class="eq-avatar" aria-hidden="true">${esc(iniciais(i.nome))}</span>
+                    <span class="eq-nome">${esc(i.nome)}<small>${esc(i.papel)}</small>${i.login ? `<span class="eq-login">Login: ${esc(i.login)}</span>` : ''}
+                        <span class="eq-tag">${i.noCadastro ? 'Também no cadastro' : 'Fora do cadastro'}</span></span>
+                </li>`).join('')}
+            </ul>` : '';
+        return cadastro + manual + '</section>';
+    }
+    function outrasNcs(reg) {
+        if (vazio(reg.problema_descricao_nc)) return [];
+        try {
+            const l = JSON.parse(reg.problema_ncs_json);
+            if (Array.isArray(l) && l.length) return l;
+        } catch (e) {}
+        return [{ cat: 'OUTRO', sev: reg.problema_severidade, desc: reg.problema_descricao_nc, acao: reg.problema_acao,
+                  resolvido: '', motivo: '', par: semAcento(reg.problema_status_atividade) === 'sim' }];
+    }
+    function totalNcs(reg, grupos) {
+        const fora = (grupos && grupos.length) ? 0 : outrasNcs(reg).length;
+        return ncsDoRegistro(reg, grupos).length + fora;
+    }
+    function abrirDetalhes(idx) {
+        const reg = registros[idx];
+        if (!reg) return;
+        idxAberto = idx;
+        if (!equipesTentou) {
+            carregarEquipesApi().then(() => {
+                if ($('modalDetalhes').open && idxAberto === idx) abrirDetalhes(idx);
+            });
+        }
+        const ncs = ncsDoRegistro(reg);
+        $('modalTitulo').textContent = 'Inspeção completa';
+        $('modalSub').textContent = [
+            formatarData(reg.data_inspecao), reg.lider && ('Líder: ' + reg.lider),
+            reg.projeto, reg.site && ('Site: ' + reg.site), reg.uf
+        ].filter(Boolean).join(' • ');
+        const kObs = Object.keys(reg).find(k => semAcento(k) === 'observacao_geral');
+        let obs = kObs ? String(reg[kObs] ?? '') : '';
+        let eqManual = '';
+        const mEq = /\[Equipe informada manualmente:\s*([^\]]*)\]/i.exec(obs);
+        if (mEq) { eqManual = mEq[1].trim(); obs = obs.replace(mEq[0], '').trim(); }
+        const geral = `<section class="insp-sec"><h3>Dados da inspeção</h3><dl class="insp-grid">
+            ${campo('Data da inspeção', formatarData(reg.data_inspecao))}
+            ${campo('Inspetor', reg.inspetor)}
+            ${campo('Líder', reg.lider)}
+            ${campo('Equipe', reg.equipe && !pareceLista(String(reg.equipe)) ? reg.equipe : '')}
+            ${campo('Login do líder', reg.login)}
+            ${campo('Login Huawei/Nokia', reg.login)}
+            ${campo('Coordenador', reg.coordenador)}
+            ${campo('UF', reg.uf)}
+            ${campo('Região', reg.centro_custo)}
+            ${campo('Projeto', reg.projeto)}
+            ${campo('Site', reg.site)}
+            ${campo('Tipo', ROT_TIPO[String(reg.tipo_ehs ?? '').toUpperCase()] || reg.tipo_ehs)}
+            ${campo('Resultado do dia', ROT_RESULTADO[String(reg.resultado_dia ?? '').toUpperCase()] || reg.resultado_dia)}
+            ${campo('Integrantes no EHS', reg.integrantesNoEhs)}
+            ${campo("Data/Hora do Clock'in", fmtDH(reg.data_hora_clockin))}
+            ${campo('Data/hora do EHS', fmtDH(reg.data_hora_ehs))}
+            ${campo('Registrado em', fmtDH(reg.criado_em))}
+        </dl></section>`;
+        const eq = integrantesDoRegistro(reg, eqManual);
+        let equipeHtml = htmlEquipe(eq);
+        if (DEBUG) {
+            const cols = Object.keys(reg).filter(k => /equipe|integrante|instalador|membro|lider|login|obs/i.test(k));
+            const eqA = equipeDaApi(reg);
+            equipeHtml += `<section class="insp-sec"><h3>DEBUG — equipe</h3><dl class="insp-grid" style="grid-template-columns:1fr">
+                <div class="insp-campo"><dt>Equipes carregadas da API</dt><dd style="font-weight:400">${equipesApi.length}</dd></div>
+                <div class="insp-campo"><dt>Equipe encontrada na API</dt><dd style="font-weight:400">${eqA ? esc(eqA.equipe) : 'NÃO ENCONTRADA'}</dd></div>
+                <div class="insp-campo"><dt>Equipe manual detectada nas observações</dt><dd style="font-weight:400">${eqManual ? esc(eqManual) : 'nenhuma'}</dd></div>${
+                cols.map(k => `<div class="insp-campo"><dt>${esc(k)}</dt><dd style="font-weight:400;white-space:pre-wrap">${esc(typeof reg[k] === 'object' ? JSON.stringify(reg[k]) : String(reg[k] ?? ''))}</dd></div>`).join('')
+            }</dl></section>`;
+        }
+        const ck = Object.entries(ITENS).map(([g, o]) => {
+            const linhas = o.checks.filter(c => !vazio(reg[c.v]) || checkEhNc(reg, c));
+            if (!linhas.length) return '';
+            return `<h4 class="ck-grupo">${esc(o.nome)}</h4><ul class="ck-lista">${linhas.map(c => {
+                const nc = checkEhNc(reg, c), v = semAcento(reg[c.v]);
+                const cls = nc ? 'nc' : (v === 'n/a' || v === 'na' ? 'na' : 'ok');
+                return `<li><span>${esc(c.nome)}</span><span class="selo ${cls}">${cls === 'nc' ? 'NC' : cls === 'na' ? 'N/A' : 'OK'}</span></li>`;
+            }).join('')}</ul>`;
+        }).join('');
+        const checklist = `<section class="insp-sec"><h3>Checklist</h3>${ck || '<p><em>Sem itens de checklist neste registro.</em></p>'}</section>`;
+        const cont = { concluida: 0, andamento: 0, pendente: 0 };
+        ncs.forEach(n => cont[statusAnalise(reg, n.check)]++);
+        const porGrupo = {};
+        ncs.forEach(n => (porGrupo[n.grupo] ??= []).push(n.check));
+        const ncHtml = Object.entries(porGrupo).map(([g, checks]) => `
+            <h4 class="ck-grupo">${esc(ITENS[g].nome)}</h4>
+            ${checks.map(c => {
+                const st = statusAnalise(reg, c);
+                const res = reg[c.acao + '_resolveu'], mot = reg[c.acao + '_motivo'];
+                return `<div class="nc-item st-${st}">
+                    <div class="nc-item-cab"><h4>${esc(c.nome)}</h4><span class="selo ${st}">${ROTULO_STATUS[st]}</span></div>
+                    <dl>
+                        <dt>Descrição da NC</dt><dd>${esc(reg[c.desc] || '—')}</dd>
+                        <dt>Severidade</dt><dd>${esc(reg[c.sev] || '—')}</dd>
+                        <dt>Ação corretiva</dt><dd>${esc(reg[c.acao] || '—')}</dd>
+                        <dt>Resolveu o problema?</dt><dd>${esc(rotSimNao(res) || '—')}</dd>
+                        ${!vazio(mot) ? `<dt>Por que não resolveu</dt><dd>${esc(mot)}</dd>` : ''}
+                        <dt>Atividade paralisada</dt><dd>${esc(reg[c.par] || '—')}</dd>
+                    </dl>
+                    ${blocoAnalise(reg, c)}
+                </div>`;
+            }).join('')}`).join('');
+        const outras = outrasNcs(reg);
+        const outrasHtml = outras.map(n => `<div class="nc-item">
+            <div class="nc-item-cab"><h4>${esc(ROT_CAT[n.cat] || n.cat || 'Outros')}</h4>${n.item === 'p3' ? '<span class="selo nc">Automática</span>' : ''}</div>
+            <dl>
+                <dt>Descrição da NC</dt><dd>${esc(n.desc || '—')}</dd>
+                <dt>Severidade</dt><dd>${esc(ROT_SEV[n.sev] || n.sev || '—')}</dd>
+                <dt>Ação corretiva</dt><dd>${esc(n.acao || '—')}</dd>
+                <dt>Resolveu o problema?</dt><dd>${esc(rotSimNao(n.resolvido) || '—')}</dd>
+                ${!vazio(n.motivo) ? `<dt>Por que não resolveu</dt><dd>${esc(n.motivo)}</dd>` : ''}
+                <dt>Atividade paralisada</dt><dd>${n.par ? 'Sim' : 'Não'}</dd>
+            </dl></div>`).join('');
+
+        const total = ncs.length + outras.length;
+        const secNc = `<section class="insp-sec"><h3>Não conformidades</h3>
+            <div class="modal-resumo">
+                <span class="selo ${total ? 'nc' : 'ok'}">${total ? total + ' NC' : 'Sem NC'}</span>
+                ${ncs.length ? `<span class="selo concluida">${cont.concluida} concluída(s)</span>
+                <span class="selo andamento">${cont.andamento} em andamento</span>
+                <span class="selo pendente">${cont.pendente} pendente(s)</span>` : ''}
+            </div>
+            ${ncHtml}
+            ${outras.length ? `<h4 class="ck-grupo">Fora do checklist</h4>${outrasHtml}` : ''}
+        </section>`;
+        const secObs = !vazio(obs) ? `<section class="insp-sec"><h3>Observações</h3><div class="insp-obs">${esc(obs)}</div></section>` : '';
+        const corpo = $('modalCorpo');
+        const rolagem = corpo.scrollTop;
+        corpo.innerHTML = geral + equipeHtml + checklist + secNc + secObs;
+        if (!$('modalDetalhes').open) $('modalDetalhes').showModal();
+        else corpo.scrollTop = rolagem;
+    }
+    $('btnLimpar').addEventListener('click', () => {
+        ['mes', ...Object.keys(FILTROS), 'naoConformes', 'itens'].forEach(id => MS.limpar($(id)));
+        $('dia').value = '';
+        $('periodoIni').value = '';
+        $('periodoFim').value = '';
+        render();
+    });
+    document.querySelectorAll('.filtros select').forEach(el =>
+        el.addEventListener('change', render));
+    ['change', 'input'].forEach(ev => $('dia').addEventListener(ev, render));
+    ['periodoIni', 'periodoFim'].forEach(id =>
+    ['change', 'input'].forEach(ev => $(id).addEventListener(ev, render)));
+    $('listaRegistros').addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-idx]');
+        if (tr) abrirDetalhes(Number(tr.dataset.idx));
+    });
+    $('listaRegistros').addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const tr = e.target.closest('tr[data-idx]');
+        if (tr) abrirDetalhes(Number(tr.dataset.idx));
+    });
+    $('btnFechar').addEventListener('click', () => $('modalDetalhes').close());
+    $('modalDetalhes').addEventListener('click', (e) => {
+        if (e.target === $('modalDetalhes')) $('modalDetalhes').close();
+    });
+    $('modalDetalhes').addEventListener('close', () => { idxAberto = null; });
+    try {
+        const c = JSON.parse(localStorage.getItem(LS_AN) || 'null');
+        if (c) analises = analisesParaMapa(c);
+    } catch (e) {}
+
+    let pronto = false; 
+    carregarAnalises().then(an => {
+        if (!an) return;
+        analises = an;
+        if (!Object.keys(an).length && $('avisoAnalises').hidden)
+            avisar('Nenhuma análise encontrada no banco de dados.');
+        if (pronto) render();  
+    });
+    carregarEquipesApi();
+    carregarMatriz()
+        .then(m => {
+            registros = matrizParaObjetos(m);
+            registros.forEach((r, i) => r._i = i);
+            montarSelects();
+            pronto = true;
+            render();
+        })
+        .catch(err => {
+            console.error(err);
+            $('listaRegistros').innerHTML = '<tr><td colspan="12" class="vazio">Não foi possível carregar os registros. Tente recarregar a página.</td></tr>';
+        });
+    </script>
+</body>
+</html>

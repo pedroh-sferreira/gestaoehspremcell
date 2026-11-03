@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de origem do problema - Gestão de EHS</title>
+    <link rel="icon" type="image/png" href="/img/logo_branco.png (2).png"/>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/dasboard.css">
+</head>
+<body>
+    <header class="topo">
+        <div class="topo-conteudo">
+            <a class="logo" href="painel.html">
+                <img src="/img/logo_branco.png" alt="Logotipo">
+            </a>
+            <nav class="menu" aria-label="Principal">
+                <ul>
+                    <li><a href="painel.html">Painel</a></li>
+                    <li><a href="registrarEhs.html">Registrar EHS</a></li>
+                    <li><a href="acoesCorretivas.html">Ações Corretivas</a></li>
+                    <li><a href="analise.html" aria-current="page">Análise de NC</a></li>
+                    <li id="liRegioes" hidden><a href="/controleregiao.html">Controle de Região</a></li>
+                    <li><a href="#" id="sair">Sair</a></li>
+                    <li><span class="usuario" id="usu"></span></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <h1>Análise de origem do problema</h1>
+        <p class="intro">Todas as não conformidades registradas aparecem abaixo. Clique em uma delas para abrir a análise dos 5 porquês.</p>
+        <section class="bloco filtros-bloco">
+            <h2>Filtros</h2>
+            <div class="filtros">
+                <div class="campo">
+                    <label for="fStatus">Situação da análise</label>
+                    <select id="fStatus" data-multi>
+                        <option value="">Todas</option>
+                        <option value="pendente">Pendentes</option>
+                        <option value="andamento">Em andamento</option>
+                        <option value="concluida">Concluídas</option>
+                    </select>
+                </div>
+                <div class="campo">
+                    <label for="fGrupo">Item verificado</label>
+                    <select id="fGrupo" data-multi></select>
+                </div>
+                <div class="campo">
+                    <label for="fBusca">Busca</label>
+                    <input type="search" id="fBusca" placeholder="Líder, projeto, item ou descrição">
+                </div>
+            </div>
+            <div class="resumo" id="resumo"></div>
+        </section>
+        <section class="bloco lista" aria-live="polite">
+            <div class="lista-cab">
+                <h2>Não conformidades registradas</h2>
+                <span class="contagem" id="contagem"></span>
+            </div>
+            <div class="tabela-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Líder</th>
+                            <th>Projeto</th>
+                            <th>UF</th>
+                            <th>Item</th>
+                            <th>Severidade</th>
+                            <th>Descrição da NC</th>
+                            <th>Análise</th>
+                            <th>5 porquês</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listaNcs"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <dialog id="modalAnalise" aria-labelledby="modalTitulo">
+        <div class="modal-cab">
+            <div>
+                <h2 id="modalTitulo">Análise dos 5 porquês</h2>
+                <p id="modalSub"></p>
+            </div>
+            <button type="button" id="btnFechar">Fechar</button>
+        </div>
+        <div class="modal-corpo">
+            <div class="nc-resumo" id="ncResumo"></div>
+            <section class="secao">
+                <h2>Problema</h2>
+                <div class="campo">
+                    <label for="problema">O que aconteceu?</label>
+                    <textarea id="problema" placeholder="Descreva o problema de forma objetiva: o que aconteceu, onde, quando e quem foi afetado. Use fatos, sem julgamentos. Ex.: Em 07/10, a equipe do site X trabalhou em altura com a APR vencida."></textarea>
+                </div>
+            </section>
+            <section class="secao">
+                <h2>Os porquês</h2>
+                <p class="dica">Cada resposta deve explicar a anterior. Baseie-se em fatos e foque em falhas de processo, não em culpados.</p>
+                <ol class="porques" id="porques"></ol>
+                <button type="button" class="secundario adicionar" id="btnAdicionar">+ Adicionar mais um porquê</button>
+            </section>
+            <section class="secao raiz">
+                <h2>Raiz do problema</h2>
+                <p class="dica">Deve ser a resposta do último porquê, em uma frase.</p>
+                <div class="campo">
+                    <label for="raiz">Qual é a causa raiz?</label>
+                    <textarea id="raiz" placeholder="Resuma a causa raiz: a falha que, se for corrigida, impede o problema de se repetir. Teste: se essa causa deixar de existir, o problema volta a acontecer? Se sim, continue perguntando 'por quê?'. Ex.: Não existe controle de vencimento das APRs antes do início da atividade."></textarea>
+                </div>
+            </section>
+            <section class="secao solucao">
+                <h2>Solução a ser feita</h2>
+                <p class="dica">A ação precisa atacar a raiz, não apenas o sintoma.</p>
+                <div class="campo">
+                    <label for="solucao">O que será feito para eliminar a causa raiz?</label>
+                    <textarea id="solucao" placeholder="Descreva a ação que elimina a causa raiz: o que será feito, quem é o responsável e até quando. Ex.: Criar checklist de validade da APR na saída da equipe; responsável: coordenador; prazo: 15/10."></textarea>
+                </div>
+            </section>
+            <div class="modal-rodape">
+                <button type="button" class="primario" id="btnSalvar">Salvar análise</button>
+                <button type="button" class="secundario" id="btnImprimir">Imprimir / salvar PDF</button>
+                <span class="msg" id="msgSalvar" role="status"></span>
+            </div>
+        </div>
+    </dialog>
+    <script src="/script/multiselect.js"></script>
+    <script>
+    (function(){
+    var s=null;
+    try{s=JSON.parse(localStorage.getItem("ehs.sessao")||sessionStorage.getItem("ehs.sessao")||"null");}catch(e){}
+    if(!s||!s.token){location.replace("index.html");return;}
+    window.SESSAO=s;
+    var u=s.usuario||{};
+    document.getElementById("usu").textContent=(u.nome||u.login||"")+(u.funcao?" · "+u.funcao:"");
+    document.getElementById("sair").addEventListener("click",function(e){
+        e.preventDefault();
+        try{localStorage.removeItem("ehs.sessao");sessionStorage.removeItem("ehs.sessao");}catch(x){}
+        location.replace("index.html");
+    });
+    })();
+    </script>
+    <script src="/script/regioes-acesso.js"></script>
+    <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwKRYdotWICN38z9EVbhyE4rztl5yMmlDd3li3pl8l3ae-pfRjE8ZoMBkokkted7jTm/exec';
+
+    const LINHA_INICIAL_DADOS = 2;   
+
+    const VALORES_NC = ['nao', 'nc', 'nao conforme', 'nao conformes', 'reprovado', 'false'];
+
+    const CATS = { APR: 'APR', EPI: 'EPI/EPC', ALTURA: 'Trabalho em altura', EQUIPE: 'Equipe e habilitação',
+        AREA: 'Isolamento de área', VEICULO: 'Veículo', EVIDENCIA: 'Evidências (fotos)', PROCESSO: 'Processo EHS', OUTRO: 'Outros' };
+    const SEV = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' };
+    const RES = { SIM: 'Sim', NAO: 'Não' };
+
+    const chk = (nome, v, desc, sev, acao, par) =>
+        ({ nome, v, desc, sev, acao, par, res: acao + '_resolveu', mot: acao + '_motivo' });
+    const padrao = (nome, pref, x) => chk(nome, pref + '_' + x, pref + '_descricao_nc_' + x,
+        pref + '_severidade_' + x, pref + '_acao_' + x, pref + '_status_atividade_' + x);
+
+    const ITENS = {
+        apr: { nome: 'APR', checks: [
+            padrao('APR dentro da validade', 'apr', 'validade'),
+            padrao('APR emitida para este site', 'apr', 'emitida'),
+            chk('Avaliação de riscos preenchida', 'apr_avaliacao', 'apr_descricao_nc_avaliacao', 'apr_severidade_avaliacao', 'apr_acao_avaliacao', 'apr_avaliacao_status')
+        ]},
+        equipe: { nome: 'Equipe e habilitação', checks: [
+            padrao('Dois torristas distintos', 'equipe', 'torrista'),
+            padrao('NR-35, NR-10 e ASO válidos', 'equipe', 'nrs_aso'),
+            padrao('CNH válida do condutor', 'equipe', 'cnh')
+        ]},
+        isolamento: { nome: 'Isolamento de área', checks: [
+            chk('Área corretamente isolada e sinalizada', 'isolamento_area', 'isolamento_descricao_nc_', 'isolamento_severidade', 'isolamento_acao', 'isolamento_atividade_status'),
+            chk('Banner de sinalização devidamente fixado e em bom estado', 'isolamento_banner', 'isolamento_descricao_nc_banner', 'isolamento_severidade_banner', 'isolamento_acao_banner', 'isolamento_atividade_status_banner')
+        ]},
+        epi: { nome: 'EPI/EPC', checks: [
+            padrao('Vestimenta e luvas íntegras', 'epi', 'vestimenta'),
+            padrao('Óculos de segurança conforme padrão', 'epi', 'oculos'),
+            padrao('Capacete de solo em bom estado e devidamente fixado', 'epi', 'capacete_solo'),
+            padrao('Capacete de altura em bom estado e devidamente fixado', 'epi', 'capacete_altura'),
+            padrao('Cinturão íntegro e ajustado', 'trabalho', 'cinturao'),
+            padrao('Talabarte Y conectado corretamente', 'trabalho', 'talabarte'),
+            padrao('Talabarte de posicionamento conectado corretamente', 'trabalho', 'talabarte_posicionamento'),
+            chk('Linha de vida existente e trava-quedas fixado', 'trabalho_linhadevida', 'trabalho_descricao_nc_linhadevida', 'trabalho_severidade_linhadevida', 'trabalho_acao_linhadevida', 'trabalho_linhadevida_status'),
+            padrao('Kit de primeiros socorros conforme padrão', 'trabalho', 'resgate'),
+            chk('Capacete homologado, jugular afivelada', 'epi_capacete', 'epi_descricao_nc_capacete', 'epi_severidade_capecete', 'epi_acao_capacete', 'epi_status_atividade_capacete'),
+            padrao('Sem acessórios fora do padrão', 'epi', 'acessorios')
+        ]},
+        veiculo: { nome: 'Veículo', checks: [
+            padrao('Pneus em boas condições', 'veiculo', 'pneu'),
+            padrao('Condições gerais do veículo satisfatórias', 'veiculo', 'condicoes_gerais'),
+            padrao('Documentos e itens de segurança', 'veiculo', 'documento')              
+        ]},
+        altura: { nome: 'Trabalho em altura', checks: [
+            padrao('Pontos de ancoragem verificados', 'trabalho', 'ancoragem')             
+        ]},
+        evidencia: { nome: 'Evidências (fotos)', checks: [
+            padrao('Fotos do kit aberto e fechado', 'evidencia', 'kit_aberto')             
+        ]},
+        processo: { nome: 'Processo EHS', checks: [] },
+        outros: { nome: 'Outros problemas', checks: [] }
+    };
+
+    const DADOS_EXEMPLO = [
+        ['id','data_inspecao','lider','projeto','uf','apr_validade','apr_descricao_nc_validade','apr_severidade_validade','apr_acao_validade','apr_status_atividade_validade','veiculo_condicoes_gerais','veiculo_descricao_nc_condicoes_gerais','veiculo_severidade_condicoes_gerais','veiculo_acao_condicoes_gerais','veiculo_acao_condicoes_gerais_resolveu','veiculo_acao_condicoes_gerais_motivo','veiculo_status_atividade_condicoes_gerais'],
+        ['ID','Data','Líder','Projeto','UF','APR','Desc','Sev','Ação','Paralisada','Condições','Desc','Sev','Ação','Resolveu','Motivo','Paralisada'],
+        ['E-001','2026-10-02','João Silva','56A0VD0','BA','NC','APR vencida','Alta','Equipe orientada a renovar','Sim','Conforme','','','','','',''],
+        ['E-002','2026-10-07','Rafael Costa','56A0T27','BA','Conforme','','','','','NC','Condições gerais do veículo insatisfatórias','Média','Veículo retido para revisão','Não','Oficina só tem vaga na próxima semana','Não']
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const semAcento = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const vazio = (s) => String(s ?? '').trim() === '';
+
+    function formatarData(v) {
+        const m = String(v ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v ?? '');
+    }
+
+    function dataOrdenavel(v) {   
+        const s = String(v ?? '');
+        let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return m[0];
+        m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+        return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+    }
+
+    function matrizParaObjetos(matriz) {
+        const cab = (matriz[0] || []).map(c => String(c).trim());
+        const out = [];
+        matriz.forEach((linha, i) => {
+            if (i < LINHA_INICIAL_DADOS) return;
+            if (!linha.some(c => String(c ?? '').trim() !== '')) return;
+            const o = { _linha: i + 1 };
+            cab.forEach((chave, j) => { if (chave) o[chave] = linha[j] ?? ''; });
+            out.push(o);
+        });
+        return out;
+    }
+
+    function checkEhNc(reg, c) {
+        return VALORES_NC.includes(semAcento(reg[c.v])) || !vazio(reg[c.desc]);
+    }
+
+    const modoExemplo = !API_URL || API_URL.startsWith('COLE_AQUI');
+    let ncs = [];
+    let analises = {};   
+    let ncAberta = null;    
+
+    async function apiGet(acao) {
+        const url = API_URL + (acao ? '?acao=' + encodeURIComponent(acao) : '');
+        const j = await (await fetch(url)).json();
+        if (!j.ok) throw new Error(j.erro || 'Falha ao ler a planilha');
+        return j.dados;
+    }
+
+    async function apiSalvar(payload) {
+        const r = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        });
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.erro || 'Falha ao salvar');
+        return j;
+    }
+    function ncsProblema(reg) {
+        if (vazio(reg.problema_descricao_nc)) return [];
+        let lista = null;
+        try { lista = JSON.parse(reg.problema_ncs_json); } catch (e) {}
+
+        if (Array.isArray(lista) && lista.length) {
+            return lista.map((x, i) => {
+                const proc = x.cat === 'PROCESSO';
+                const div = /diverge do cadastro/i.test(x.desc || '');
+                return {
+                    suf: i === 0 ? 'problema_categoria' : 'problema_ncs_json#' + (i + 1),
+                    grupo: proc ? 'processo' : div ? 'equipe' : 'outros',
+                    nome: proc ? 'Atividade sem EHS' : div ? 'Divergência de integrantes' : 'Outro problema',
+                    rotuloGrupo: (proc || div) ? '' : 'Outros problemas · ' + (CATS[x.cat] || x.cat || 'Outros'),
+                    dados: {
+                        desc: x.desc, sev: SEV[x.sev] || x.sev || '', acao: x.acao,
+                        res: RES[x.resolvido] || '', mot: x.motivo, par: x.par ? 'Sim' : 'Não'
+                    }
+                };
+            });
+        }
+        return [{
+            suf: 'problema_categoria', grupo: 'outros', nome: 'Outro problema',
+            rotuloGrupo: '',
+            dados: {
+                desc: reg.problema_descricao_nc, sev: reg.problema_severidade, acao: reg.problema_acao,
+                res: reg.problema_resolveu, mot: reg.problema_motivo, par: reg.problema_status_atividade
+            }
+        }];
+    }
+
+    function construirNcs(registros) {
+        const lista = [];
+        registros.forEach(reg => {
+            const regId = !vazio(reg.id) ? reg.id : 'L' + reg._linha;
+            Object.entries(ITENS).forEach(([g, grupo]) => {
+                grupo.checks.forEach(c => {
+                    if (!checkEhNc(reg, c)) return;
+                    lista.push({
+                        id: regId + '|' + c.v, regId, reg, grupo: g, nome: c.nome, rotuloGrupo: '',
+                        dados: { desc: reg[c.desc], sev: reg[c.sev], acao: reg[c.acao], res: reg[c.res], mot: reg[c.mot], par: reg[c.par] }
+                    });
+                });
+            });
+            ncsProblema(reg).forEach(p => {
+                lista.push({ id: regId + '|' + p.suf, regId, reg, grupo: p.grupo, nome: p.nome, rotuloGrupo: p.rotuloGrupo, dados: p.dados });
+            });
+        });
+        lista.sort((a, b) => dataOrdenavel(b.reg.data_inspecao).localeCompare(dataOrdenavel(a.reg.data_inspecao)));
+        return lista;
+    }
+    const rotuloGrupo = (nc) => nc.rotuloGrupo || ITENS[nc.grupo].nome;
+    function analisesParaMapa(matriz) {
+        const mapa = {};
+        matrizParaObjetos([matriz[0] || [], [], ...matriz.slice(1)]).forEach(o => {
+            let porques = [];
+            try { porques = JSON.parse(o.porques_json || '[]'); } catch (e) {}
+            mapa[o.nc_id] = { ...o, porques };
+        });
+        return mapa;
+    }
+
+    function statusDe(nc) {
+        const a = analises[nc.id];
+        if (!a) return 'pendente';
+        return (!vazio(a.raiz) && !vazio(a.solucao)) ? 'concluida' : 'andamento';
+    }
+    const ROTULO = { pendente: 'Pendente', andamento: 'Em andamento', concluida: 'Concluída' };
+    function montarFiltroGrupo() {
+        $('fGrupo').innerHTML = '<option value="">Todos</option>' +
+            Object.entries(ITENS).map(([g, v]) => `<option value="${g}">${esc(v.nome)}</option>`).join('');
+    }
+    function filtradas() {
+        const st = MS.valores($('fStatus')), gr = MS.valores($('fGrupo')), q = semAcento($('fBusca').value);
+        return ncs.filter(nc => {
+            if (st.length && !st.includes(statusDe(nc))) return false;
+            if (gr.length && !gr.includes(nc.grupo)) return false;
+            if (q) {
+                const texto = semAcento([nc.reg.lider, nc.reg.projeto, nc.reg.uf, rotuloGrupo(nc),
+                    nc.nome, nc.dados.desc].join(' '));
+                if (!texto.includes(q)) return false;
+            }
+            return true;
+        });
+    }
+
+    function render() {
+        const cont = { pendente: 0, andamento: 0, concluida: 0 };
+        ncs.forEach(nc => cont[statusDe(nc)]++);
+        $('resumo').innerHTML =
+            `<span class="selo pendente">${cont.pendente} pendentes</span>` +
+            `<span class="selo andamento">${cont.andamento} em andamento</span>` +
+            `<span class="selo concluida">${cont.concluida} concluídas</span>`;
+
+        const lista = filtradas();
+        $('contagem').textContent = lista.length + (lista.length === 1 ? ' não conformidade' : ' não conformidades');
+
+        if (!lista.length) {
+            $('listaNcs').innerHTML = '<tr><td colspan="9" class="vazio">Nenhuma não conformidade encontrada.</td></tr>';
+            return;
+        }
+
+        $('listaNcs').innerHTML = lista.map(nc => {
+            const st = statusDe(nc);
+            const r = nc.reg, d = nc.dados;
+            return `<tr>
+                <td class="nowrap">${esc(formatarData(r.data_inspecao))}</td>
+                <td>${esc(r.lider)}</td>
+                <td>${esc(r.projeto)}</td>
+                <td>${esc(r.uf)}</td>
+                <td>${esc(nc.nome)}<span class="item-grupo">${esc(rotuloGrupo(nc))}</span></td>
+                <td>${esc(d.sev || '—')}</td>
+                <td class="desc">${esc(d.desc || '—')}</td>
+                <td><span class="selo ${st}">${ROTULO[st]}</span></td>
+                <td><button type="button" class="btn-abrir" data-id="${esc(nc.id)}">${st === 'pendente' ? 'Analisar' : 'Abrir análise'}</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    const ORIENTACOES = [
+        'Por que o problema aconteceu? Responda com um fato observado, não uma opinião. Ex.: A APR não foi renovada antes de iniciar a atividade.',
+        'Por que a resposta do 1º porquê aconteceu? Parta sempre da resposta anterior. Ex.: Ninguém conferiu a data de validade antes de liberar a equipe.',
+        'Continue aprofundando: o que permitiu que isso acontecesse? Evite apontar culpados e busque falhas de processo.',
+        'Procure a causa ligada a processo, treinamento, recurso ou comunicação. Ex.: O checklist de saída não inclui a validade da APR.',
+        'Você deve estar perto da causa raiz. Se ainda houver um "por quê" a responder, use o botão "Adicionar mais um porquê" abaixo.'
+    ];
+    const ORIENTACAO_EXTRA = 'Mais um porquê: pergunte novamente por que a resposta anterior aconteceu. Pare quando a resposta for uma falha de processo que você consegue corrigir.';
+
+    const lista = $('porques');
+
+    function criarPorque(extra, valor) {
+        const li = document.createElement('li');
+        li.className = 'porque' + (extra ? ' extra' : '');
+        li.innerHTML = `
+            <span class="num"></span>
+            <div class="campo">
+                <div class="porque-cab">
+                    <label></label>
+                    ${extra ? '<button type="button" class="remover">Remover</button>' : ''}
+                </div>
+                <textarea></textarea>
+            </div>`;
+        li.querySelector('textarea').value = valor || '';
+        lista.appendChild(li);
+        numerar();
+    }
+
+    function numerar() {
+        [...lista.children].forEach((li, i) => {
+            const n = i + 1, ta = li.querySelector('textarea'), lb = li.querySelector('label');
+            li.querySelector('.num').textContent = n;
+            ta.id = 'porque' + n;
+            ta.placeholder = ORIENTACOES[i] || ORIENTACAO_EXTRA;
+            lb.htmlFor = ta.id;
+            lb.textContent = n + 'º porquê';
+        });
+    }
+
+    function abrirAnalise(id) {
+        const nc = ncs.find(n => n.id === id);
+        if (!nc) return;
+        ncAberta = nc;
+        const r = nc.reg, d = nc.dados, a = analises[id];
+
+        $('modalSub').textContent = [formatarData(r.data_inspecao), r.lider && 'Líder: ' + r.lider, r.projeto, r.uf, r.site && 'Site: ' + r.site]
+            .filter(Boolean).join(' • ');
+
+        $('ncResumo').innerHTML = `
+            <h3>${esc(nc.nome)} <small>(${esc(rotuloGrupo(nc))})</small></h3>
+            <dl>
+                <dt>Descrição da NC</dt><dd>${esc(d.desc || '—')}</dd>
+                <dt>Severidade</dt><dd>${esc(d.sev || '—')}</dd>
+                <dt>Ação corretiva</dt><dd>${esc(d.acao || '—')}</dd>
+                <dt>Resolveu o problema?</dt><dd>${esc(d.res || '—')}</dd>
+                ${vazio(d.mot) ? '' : `<dt>Por que não resolveu?</dt><dd>${esc(d.mot)}</dd>`}
+                <dt>Atividade paralisada</dt><dd>${esc(d.par || '—')}</dd>
+            </dl>`;
+        lista.innerHTML = '';
+        const salvos = a ? a.porques : [];
+        const total = Math.max(5, salvos.length);
+        for (let i = 0; i < total; i++) criarPorque(i >= 5, salvos[i]);
+
+        $('problema').value = a ? a.problema : [nc.nome, d.desc].filter(Boolean).join(': ');
+        $('raiz').value = a ? a.raiz : '';
+        $('solucao').value = a ? a.solucao : '';
+        $('msgSalvar').textContent = '';
+        $('msgSalvar').className = 'msg';
+        $('modalAnalise').showModal();
+    }
+
+    async function salvarAnalise() {
+        if (!ncAberta) return;
+        const nc = ncAberta;
+        const payload = {
+            acao: 'salvar',
+            nc_id: nc.id,
+            registro_id: nc.regId,
+            item: rotuloGrupo(nc) + ' - ' + nc.nome,
+            problema: $('problema').value.trim(),
+            porques: [...lista.querySelectorAll('textarea')].map(t => t.value.trim()),
+            raiz: $('raiz').value.trim(),
+            solucao: $('solucao').value.trim()
+        };
+        const msg = $('msgSalvar'), btn = $('btnSalvar');
+        btn.disabled = true;
+        msg.className = 'msg'; msg.textContent = 'Salvando...';
+        try {
+            if (!modoExemplo) await apiSalvar(payload);
+            analises[nc.id] = { ...payload };
+            msg.textContent = modoExemplo ? 'Salvo apenas nesta página (modo de exemplo).' : 'Análise salva.';
+            render();
+        } catch (err) {
+            console.error(err);
+            msg.className = 'msg erro';
+            msg.textContent = 'Não foi possível salvar. Tente novamente.';
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    ['fStatus', 'fGrupo'].forEach(id => $(id).addEventListener('change', render));
+    $('fBusca').addEventListener('input', render);
+
+    $('listaNcs').addEventListener('click', (e) => {
+        const b = e.target.closest('.btn-abrir');
+        if (b) abrirAnalise(b.dataset.id);
+    });
+
+    $('btnAdicionar').addEventListener('click', () => {
+        criarPorque(true, '');
+        lista.lastElementChild.querySelector('textarea').focus();
+    });
+
+    lista.addEventListener('click', (e) => {
+        const b = e.target.closest('.remover');
+        if (!b) return;
+        b.closest('.porque').remove();
+        numerar();
+    });
+
+    $('btnSalvar').addEventListener('click', salvarAnalise);
+    $('btnImprimir').addEventListener('click', () => window.print());
+    $('btnFechar').addEventListener('click', () => $('modalAnalise').close());
+    $('modalAnalise').addEventListener('click', (e) => {
+        if (e.target === $('modalAnalise')) $('modalAnalise').close();
+    });
+
+    async function iniciar() {
+        montarFiltroGrupo();
+        try {
+            let matrizEhs, matrizAnalises = [];
+            if (modoExemplo) {
+                console.warn('API_URL não configurada: usando dados de exemplo.');
+                matrizEhs = DADOS_EXEMPLO;
+            } else {
+                [matrizEhs, matrizAnalises] = await Promise.all([apiGet(''), apiGet('analises')]);
+            }
+            ncs = construirNcs(matrizEhs ? matrizParaObjetos(matrizEhs) : []);
+            analises = analisesParaMapa(matrizAnalises);
+            render();
+        } catch (err) {
+            console.error(err);
+            $('listaNcs').innerHTML = '<tr><td colspan="9" class="vazio">Não foi possível carregar as não conformidades. Tente recarregar a página.</td></tr>';
+        }
+    }
+    iniciar();
+    </script>
+</body>
+</html>

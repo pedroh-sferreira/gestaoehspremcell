@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Região - Gestão de EHS</title>
+<link rel="icon" type="image/png" href="/img/favicon (2).png"/>
+<script>
+(function(){
+  let s=null;
+  try{s=JSON.parse(localStorage.getItem("ehs.sessao")||sessionStorage.getItem("ehs.sessao")||"null");}catch(e){}
+  if(!s||!s.token){location.replace("index.html");return;}
+  window.SESSAO=s;
+})();
+</script>
+<script src="/script/regioes-acesso.js"></script>
+<script>
+if(window.ACESSO&&!ACESSO.ADMIN)location.replace("painel.html");
+</script>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/dasboard.css">
+<link rel="stylesheet" href="selects.css?v=4">
+<style>
+[hidden]{display:none!important}
+input[type=checkbox]{width:14px;height:14px;margin:0}
+.reg-chips{display:flex;flex-wrap:wrap;gap:6px 14px}
+.reg-chips label{display:flex;align-items:center;gap:5px;font-size:.9rem;cursor:pointer}
+tr.sujo{background:#fff8e1}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="topo-conteudo">
+    <a class="logo" href="painel.html"><img src="/img/logo_branco.png" alt="Logotipo"></a>
+    <nav class="menu" aria-label="Principal">
+      <ul>
+        <li><a href="painel.html">Painel</a></li>
+        <li><a href="registrarEhs.html">Registrar EHS</a></li>
+        <li><a href="acoesCorretivas.html">Ações Corretivas</a></li>
+        <li><a href="analise.html">Análise de NC</a></li>
+        <li id="liRegioes" hidden><a href="/controleregiao.html" aria-current="page">Controle de Região</a></li>
+        <li><a href="#" id="sair">Sair</a></li>
+        <li><span class="usuario" id="usu"></span></li>
+        
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+<h1>Controle de Região</h1>
+<div class="aviso" id="aviso" role="alert" hidden></div>
+
+<div class="bloco">
+  <div class="acoes" style="justify-content:space-between;margin-bottom:8px">
+    <h2 style="margin:0">Inspetores <span class="small muted" id="qtd"></span></h2>
+    <div class="acoes"><span class="small muted" id="sujoQtd"></span><button type="button" class="primario" id="salvar" disabled>Salvar alterações</button></div>
+  </div>
+  <p class="small muted">Marque as regiões sob responsabilidade de cada inspetor. Ele passa a ver, em todo o sistema, apenas colaboradores, registros e NCs dessas regiões. Inspetor sem região marcada não vê nada.</p>
+  <div class="tabela-wrap">
+    <table>
+      <thead><tr><th>Inspetor</th><th>Login</th><th>Regiões</th><th></th></tr></thead>
+      <tbody id="tb"><tr><td colspan="4" class="vazio">Carregando…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  
+(function(){
+"use strict";
+const SES=window.SESSAO;if(!SES||!ACESSO.ADMIN)return;
+const USU=SES.usuario||{};
+const API_URL="https://script.google.com/macros/s/AKfycbxIWkTRIDUxOQn-jck_wbDz6nRQhwmIXekt9RisXLwM41DEfiAPdMh4fdklM_HGYHfNgQ/exec";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sa=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toUpperCase();
+let tT;const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tT);tT=setTimeout(()=>t.classList.remove("on"),3000);};
+const sair=()=>{try{localStorage.removeItem("ehs.sessao");sessionStorage.removeItem("ehs.sessao");localStorage.removeItem("ehs.cache.inicio");}catch(e){}location.replace("index.html");};
+$("#usu").textContent=(USU.nome||USU.login||"")+(USU.funcao?" · "+USU.funcao:"");
+$("#sair").addEventListener("click",e=>{e.preventDefault();sair();});
+
+async function api(body){
+  body.token=SES.token;
+  const r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});
+  const j=await r.json();
+  if(j&&j.codigo==="SESSAO")sair();
+  return j;
+}
+
+let U=[];const orig={},atual={};
+const lista=v=>(Array.isArray(v)?v:String(v||"").split(/[,;|]/)).map(sa).filter(Boolean);
+const igual=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
+const sujos=()=>U.filter(u=>!igual(orig[u.login],atual[u.login]));
+
+function chips(login){
+  return ACESSO.REGIOES.map(r=>'<label><input type="checkbox" data-l="'+esc(login)+'" value="'+r+'"'+(atual[login].includes(r)?" checked":"")+'> '+r+'</label>').join("");
+}
+function render(){
+  $("#qtd").textContent="· "+U.length;
+  $("#tb").innerHTML=U.length?U.map(u=>{
+    const sujo=!igual(orig[u.login],atual[u.login]);
+    return '<tr class="'+(sujo?"sujo":"")+'"><td><b>'+esc(u.nome)+'</b></td><td class="nowrap">'+esc(u.login)+'</td><td><div class="reg-chips">'+chips(u.login)+'</div></td>'+
+      '<td class="nowrap"><button type="button" class="secundario pq" data-all="'+esc(u.login)+'">Todas</button> <button type="button" class="secundario pq" data-none="'+esc(u.login)+'">Nenhuma</button></td></tr>';
+  }).join(""):'<tr><td colspan="4" class="vazio">Nenhum inspetor encontrado.</td></tr>';
+  const n=sujos().length;
+  $("#sujoQtd").textContent=n?n+" inspetor"+(n>1?"es":"")+" com alteração":"";
+  $("#salvar").disabled=!n;
+}
+
+$("#tb").addEventListener("change",e=>{
+  const c=e.target;if(c.type!=="checkbox"||!c.dataset.l)return;
+  const a=atual[c.dataset.l];
+  if(c.checked){if(!a.includes(c.value))a.push(c.value);}else atual[c.dataset.l]=a.filter(x=>x!==c.value);
+  render();
+});
+$("#tb").addEventListener("click",e=>{
+  const a=e.target.closest("[data-all]"),n=e.target.closest("[data-none]");
+  if(a)atual[a.dataset.all]=ACESSO.REGIOES.slice();
+  else if(n)atual[n.dataset.none]=[];
+  else return;
+  render();
+});
+
+$("#salvar").addEventListener("click",async()=>{
+  const S=sujos();if(!S.length)return;
+  const b=$("#salvar");b.disabled=true;
+  try{
+    const r=await api({action:"salvarRegioes",usuarios:S.map(u=>({login:u.login,regioes:atual[u.login]}))});
+    if(!r.ok)throw new Error(r.erro||"Falha ao salvar");
+    S.forEach(u=>{orig[u.login]=atual[u.login].slice();});
+    toast("Regiões salvas para "+S.length+" inspetor"+(S.length>1?"es":""));
+  }catch(e){toast("Erro ao salvar: "+e.message);}
+  render();
+});
+window.addEventListener("beforeunload",e=>{if(sujos().length){e.preventDefault();e.returnValue="";}});
+
+(async function(){
+  try{
+    const r=await fetch(API_URL+"?action=usuarios&token="+encodeURIComponent(SES.token));
+    const j=JSON.parse(await r.text());
+    if(j&&j.codigo==="SESSAO")return sair();
+    if(!j.ok)throw new Error(j.erro||"Falha ao carregar usuários");
+    U=(j.dados||[]).filter(u=>["INSPETOR","INSPETOR SST"].includes(sa(u.funcao)));
+    U.forEach(u=>{orig[u.login]=lista(u.regioes);atual[u.login]=orig[u.login].slice();});
+    render();
+  }catch(e){
+    $("#tb").innerHTML='<tr><td colspan="4" class="vazio err">Não foi possível carregar: '+esc(e.message)+'</td></tr>';
+  }
+})();
+})();
+</script>
+</body>
+</html>

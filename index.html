@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Gestão de EHS</title>
+    <link rel="icon" type="image/png" href="/img/favicon (2).png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #F2F2F2;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            background: #FFFFFF;
+            border-radius: 14px;
+            padding: 40px;
+            box-shadow: 0 10px 35px rgba(35, 61, 140, 0.15);
+            border: 1px solid #ADB8D9;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-container img {
+            max-width: 200px;
+            max-height: 80px;
+            object-fit: contain;
+        }
+
+        .title {
+            text-align: center;
+            color: #233D8C;
+            font-size: 25px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6F7894;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            color: #233D8C;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .input-group input {
+            width: 100%;
+            height: 48px;
+            padding: 0 15px;
+            border: 1px solid #ADB8D9;
+            border-radius: 8px;
+            background: #F2F2F2;
+            color: #233D8C;
+            font-size: 15px;
+            outline: none;
+            transition: 0.2s ease;
+        }
+
+        .input-group input:focus {
+            border-color: #2E4CA6;
+            background: #FFFFFF;
+            box-shadow: 0 0 0 3px rgba(46, 76, 166, 0.12);
+        }
+
+        .input-group input::placeholder {
+            color: #8E99B5;
+        }
+
+        .options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            font-size: 13px;
+        }
+
+        .remember {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #59637E;
+        }
+
+        .remember input {
+            accent-color: #2E4CA6;
+            cursor: pointer;
+        }
+
+        .login-err {
+            color: #C42B2B;
+            background: #F8E1DF;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .login-button {
+            width: 100%;
+            height: 50px;
+            border: none;
+            border-radius: 8px;
+            background: #233D8C;
+            color: #FFFFFF;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .login-button:hover {
+            background: #2E4CA6;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(35, 61, 140, 0.25);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .login-button:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 25px;
+            }
+
+            .title {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-container">
+            <img src="/img/logo_azul.png" alt="Logo da Empresa">
+        </div>
+        <h1 class="title">Bem-vindo</h1>
+        <p class="subtitle">Entre com seus dados para acessar o sistema</p>
+
+        <form id="formLogin" novalidate>
+            <div class="input-group">
+                <label for="usuario">Usuário</label>
+                <input
+                    type="text"
+                    id="usuario"
+                    name="usuario"
+                    placeholder="Digite seu usuário"
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div class="input-group">
+                <label for="senha">Senha</label>
+                <input
+                    type="password"
+                    id="senha"
+                    name="senha"
+                    placeholder="Digite sua senha"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <div class="options">
+                <label class="remember">
+                    <input type="checkbox" name="lembrar" id="lembrar">
+                    Lembrar de mim
+                </label>
+            </div>
+
+            <p class="login-err" id="loginErr" role="alert" hidden></p>
+
+            <button type="submit" class="login-button" id="btnEntrar">ENTRAR</button>
+        </form>
+    </div>
+
+<script>
+(function () {
+    "use strict";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxIWkTRIDUxOQn-jck_wbDz6nRQhwmIXekt9RisXLwM41DEfiAPdMh4fdklM_HGYHfNgQ/exec";
+    const DESTINO = "painel.html";
+    const TROCA = "trocarSenha.html";
+    const CHAVE = "ehs.sessao";
+
+    const $ = s => document.querySelector(s);
+
+    const destinoDe = usuario => (usuario && usuario.trocarSenha) ? TROCA : DESTINO;
+
+    async function api(body) {
+        const r = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(body)
+        });
+        const txt = await r.text();
+        try { return JSON.parse(txt); }
+        catch (e) { throw new Error("O servidor não devolveu JSON. Publique uma nova versão do Web App."); }
+    }
+
+    function lerSessao() {
+        try {
+            return JSON.parse(localStorage.getItem(CHAVE) || sessionStorage.getItem(CHAVE) || "null");
+        } catch (e) { return null; }
+    }
+
+    function limparSessao() {
+        try { localStorage.removeItem(CHAVE); sessionStorage.removeItem(CHAVE); } catch (e) {}
+    }
+    (async function () {
+        const s = lerSessao();
+        if (!s || !s.token) return;
+        try {
+            const j = await api({ action: "sessao", token: s.token });
+            if (j.ok) location.replace(destinoDe(j.usuario));
+            else limparSessao();
+        } catch (e) {}
+    })();
+
+    $("#formLogin").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const btn = $("#btnEntrar"), err = $("#loginErr");
+        const usuario = $("#usuario").value.trim(), senha = $("#senha").value;
+
+        err.hidden = true;
+        if (!usuario || !senha) {
+            err.textContent = "Informe usuário e senha.";
+            err.hidden = false;
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "ENTRANDO...";
+        try {
+            const j = await api({ action: "login", login: usuario, senha: senha });
+            if (!j.ok) throw new Error(j.erro || "Falha no login.");
+
+            limparSessao();
+            const store = $("#lembrar").checked ? localStorage : sessionStorage;
+            store.setItem(CHAVE, JSON.stringify({ token: j.token, usuario: j.usuario }));
+            location.href = destinoDe(j.usuario);
+        } catch (x) {
+            err.textContent = x.message;
+            err.hidden = false;
+            btn.disabled = false;
+            btn.textContent = "ENTRAR";
+            $("#senha").value = "";
+            $("#senha").focus();
+        }
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ações Corretivas - Gestão de EHS</title>
+<link rel="icon" type="image/png" href="/img/logo_branco.png (2).png"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  let s=null;
+  try{s=JSON.parse(localStorage.getItem("ehs.sessao")||sessionStorage.getItem("ehs.sessao")||"null");}catch(e){}
+  if(!s||!s.token){location.replace("index.html");return;}
+  window.SESSAO=s;
+})();
+</script>
+<script src="/script/regioes-acesso.js"></script>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/dasboard.css">
+<style>
+[hidden]{display:none!important}
+input[type=checkbox]{width:14px;height:14px;margin:0}
+.kpis{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.kpi{flex:1 1 150px;border:1px solid #d9dee7;border-radius:8px;padding:10px 14px;background:#fff}
+.kpi b{display:block;font-size:22px}
+.tab-wrap{overflow-x:auto}
+table.ac{width:100%;border-collapse:collapse;font-size:13px}
+table.ac th,table.ac td{padding:8px 10px;border-bottom:1px solid #e5e8ee;text-align:left;vertical-align:top}
+table.ac th{background:#f4f6fa;position:sticky;top:0;white-space:nowrap}
+table.ac td.desc{min-width:220px}
+.pill.sim{background:#e3f6e8;color:#14702e}
+.pill.nao{background:#fde8e8;color:#b42318}
+.pill.sem{background:#eef0f4;color:#566}
+.filtros{--campo-largura:190px}
+.filtros select:not([data-multi]){
+  background-color:var(--sel-fundo,#f6f8fd);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b77a3' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 7px center;
+  border:1px solid var(--sel-linha,#dde3f1);
+}
+.filtros select:not([data-multi]):hover,
+.filtros select:not([data-multi]):focus{border-color:var(--sel-destaque,#233d8c)}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="topo-conteudo">
+    <a class="logo" href="painel.html"><img src="/img/logo_branco.png" alt="Logotipo"></a>
+    <nav class="menu" aria-label="Principal">
+      <ul>
+        <li><a href="painel.html">Painel</a></li>
+        <li><a href="registrarEhs.html">Registrar EHS</a></li>
+        <li><a href="acoesCorretivas.html" aria-current="page">Ações Corretivas</a></li>
+        <li><a href="analise.html">Análise de NC</a></li>
+        <li id="liRegioes" hidden><a href="/controleregiao.html">Controle de Região</a></li>
+        <li><a href="#" id="sair">Sair</a></li>
+        <li><span class="usuario" id="usu"></span></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main>
+<div class="aviso" id="aviso" role="alert" hidden></div>
+<h1>Ações Corretivas</h1>
+<div class="bloco">
+  <h2>Filtros</h2>
+  <div class="filtros">
+    <div class="campo"><label for="fBusca">Buscar</label><input type="text" id="fBusca" placeholder="Site, equipe, inspetor, descrição ou motivo"></div>
+    <div class="campo"><label for="fDias">Período</label>
+      <select id="fDias"><option value="30">Últimos 30 dias</option><option value="60" selected>Últimos 60 dias</option><option value="90">Últimos 90 dias</option></select></div>
+    <div class="campo"><label for="fCc">Região</label><select id="fCc" data-multi></select></div>
+    <div class="campo"><label for="fCoord">Coordenador</label><select id="fCoord" data-multi></select></div>
+    <div class="campo"><label for="fSev">Criticidade</label><select id="fSev" data-multi></select></div>
+    <div class="campo"><label for="fSit">Situação</label><select id="fSit" data-multi></select></div>
+  </div>
+</div>
+<div class="kpis" id="kpis"></div>
+<div class="bloco">
+  <div class="acoes" style="justify-content:space-between;margin-bottom:8px">
+    <h2 style="margin:0">Registro de ações corretivas <span class="small muted" id="qtd"></span></h2>
+    <button type="button" class="secundario" id="exportar">Exportar</button>
+  </div>
+  <div class="tab-wrap">
+    <table class="ac">
+      <thead><tr><th>Data</th><th>Site</th><th>Equipe</th><th>Região</th><th>Inspetor</th><th>Categoria</th><th>NC</th><th>Criticidade</th><th>Ação corretiva</th><th>Resolveu?</th><th>Motivo (não resolveu)</th></tr></thead>
+      <tbody id="corpo"></tbody>
+    </table>
+  </div>
+</div>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/script/multiselect.js"></script>
+<script>
+(function(){
+"use strict";
+const SES=window.SESSAO;if(!SES)return;
+
+const USU=SES.usuario||{};
+
+const ACESSO=window.ACESSO||{ADMIN:false,MINHAS:[],semRegiao:true,filtrar:()=>[],ve:()=>false};
+
+const $=s=>document.querySelector(s);
+
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const tit=s=>String(s||"").toLowerCase().replace(/(^|\s)(\S)/g,(m,a,b)=>a+b.toUpperCase()).replace(/ (De|Da|Do|Dos|Das|E)(?= )/g,m=>m.toLowerCase());
+
+const fmtD=i=>i?i.slice(8,10)+"/"+i.slice(5,7)+"/"+i.slice(0,4):"—";
+
+const semAcento=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toUpperCase();
+
+let tT;const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tT);tT=setTimeout(()=>t.classList.remove("on"),3000);};
+
+const sair=()=>{try{localStorage.removeItem("ehs.sessao");sessionStorage.removeItem("ehs.sessao");localStorage.removeItem("ehs.cache.inicio");}catch(e){}location.replace("index.html");};
+
+const API_URL="https://script.google.com/macros/s/AKfycbxNjPQzn8kTv7-RAPOR8UOOCUJHnAEr-u78lNn-00QUgEgwD2aWGfI-NASbVJCRq0u52w/exec";
+
+const SEVS={CRITICA:"Crítica",ALTA:"Alta",MEDIA:"Média",BAIXA:"Baixa"};
+
+const CATS={APR:"APR",EPI:"EPI/EPC",ALTURA:"Trabalho em altura",EQUIPE:"Equipe e habilitação",AREA:"Isolamento de área",VEICULO:"Veículo",EVIDENCIA:"Evidências (fotos)",PROCESSO:"Processo EHS",OUTRO:"Outros"};
+
+const SIT={SIM:["Sim","sim"],NAO:["Não","nao"],SEM:["Sem informação","sem"]};
+
+$("#usu").textContent=(USU.nome||USU.login||"")+(USU.funcao?" · "+USU.funcao:"");
+
+$("#sair").addEventListener("click",e=>{e.preventDefault();sair();});
+
+if(ACESSO.semRegiao){const a=$("#aviso");a.textContent="Nenhuma região foi atribuída ao seu usuário. Peça ao administrador.";a.hidden=false;}
+
+let LINHAS=[];
+
+function sitDe(v){const s=semAcento(v);return s==="SIM"||s==="S"||s==="TRUE"?"SIM":s==="NAO"||s==="N"||s==="FALSE"?"NAO":"SEM";}
+
+function achatar(regs){
+  const o=[];
+  regs.forEach(r=>(r.ncs||[]).forEach(n=>o.push({
+    data:r.data||"",site:r.site||"",equipe:r.equipe||tit(r.lider),cc:String(r.cc||"").toUpperCase(),
+    coord:String(r.coordenador||"").toUpperCase(),insp:r.inspetor||"",cat:n.cat,sev:n.sev,desc:n.desc||"",
+    acao:n.acao||"",sit:sitDe(n.resolvido),motivo:n.motivo||"",par:!!n.par})));
+  return o.sort((a,b)=>b.data.localeCompare(a.data));
+}
+
+async function carregar(){
+  const dias=$("#fDias").value;
+  $("#corpo").innerHTML='<tr><td colspan="11" class="small muted">Carregando…</td></tr>';
+  try{
+    const r=await fetch(API_URL+"?action=registros&dias="+dias);
+    const txt=await r.text();let j;
+    try{j=JSON.parse(txt);}catch(e){throw new Error("O Apps Script não devolveu JSON. Início da resposta: "+txt.slice(0,80));}
+    if(!j.ok)throw new Error(j.erro||"Falha ao ler registros");
+    LINHAS=achatar(ACESSO.filtrar(j.dados||[],"cc"));
+    montaFiltros();listar();
+  }catch(e){$("#corpo").innerHTML='<tr><td colspan="11" class="err">Não foi possível carregar: '+esc(e.message)+'</td></tr>';}
+}
+
+
+function opts(sel,pares,rot){
+  const c=MS.valores(sel);
+  sel.innerHTML='<option value="">'+rot+'</option>'+pares.map(p=>'<option value="'+esc(p[0])+'">'+esc(p[1])+'</option>').join("");
+  Array.from(sel.options).forEach(o=>{o.selected=o.value!==""&&c.includes(o.value);});
+  MS.atualizar(sel);
+}
+
+const uniq=k=>Array.from(new Set(LINHAS.map(l=>l[k]).filter(Boolean))).sort();
+function montaFiltros(){
+  opts($("#fCc"),uniq("cc").map(v=>[v,v]),"Todos");
+  opts($("#fCoord"),uniq("coord").map(v=>[v,tit(v)]),"Todos");
+  opts($("#fSev"),Object.keys(SEVS).map(k=>[k,SEVS[k]]),"Todas");
+  opts($("#fSit"),[["NAO","Não resolvida"],["SIM","Resolvida"],["SEM","Sem informação"]],"Todas");
+}
+function filtradas(){
+  const q=semAcento($("#fBusca").value),cc=MS.valores($("#fCc")),co=MS.valores($("#fCoord")),sv=MS.valores($("#fSev")),st=MS.valores($("#fSit"));
+  return LINHAS.filter(l=>(!q||semAcento([l.site,l.equipe,l.insp,l.desc,l.acao,l.motivo].join(" ")).includes(q))
+    &&(!cc.length||cc.includes(l.cc))&&(!co.length||co.includes(l.coord))&&(!sv.length||sv.includes(l.sev))&&(!st.length||st.includes(l.sit)));
+}
+
+function listar(){
+  const L=filtradas();
+  $("#qtd").textContent="· "+L.length+" de "+LINHAS.length;
+  const n=k=>L.filter(l=>l.sit===k).length;
+  $("#kpis").innerHTML=[["NCs com ação corretiva",L.length],["Resolvidas",n("SIM")],["Não resolvidas",n("NAO")],["Sem informação",n("SEM")]]
+    .map(k=>'<div class="kpi"><span class="small muted">'+k[0]+'</span><b>'+k[1]+'</b></div>').join("");
+  $("#corpo").innerHTML=L.length?L.map(l=>'<tr><td>'+fmtD(l.data)+'</td><td>'+esc(l.site||"—")+'</td><td>'+esc(l.equipe)+'</td><td>'+esc(l.cc)+'</td><td>'+esc(tit(l.insp))+'</td><td>'+esc(CATS[l.cat]||l.cat||"")+'</td><td class="desc">'+esc(l.desc)+(l.par?' <span class="pill crit">Paralisada</span>':"")+'</td><td>'+esc(SEVS[l.sev]||"—")+'</td><td class="desc">'+(l.acao?esc(l.acao):'<span class="muted">—</span>')+'</td><td><span class="pill '+SIT[l.sit][1]+'">'+SIT[l.sit][0]+'</span></td><td class="desc">'+(l.sit==="NAO"?(l.motivo?esc(l.motivo):'<span class="muted">Não informado</span>'):'<span class="muted">—</span>')+'</td></tr>').join("")
+    :'<tr><td colspan="11" class="small muted">Nenhuma ação corretiva encontrada.</td></tr>';
+}
+["fCc","fCoord","fSev","fSit"].forEach(i=>$("#"+i).addEventListener("change",listar));
+$("#fBusca").addEventListener("input",listar);
+$("#fDias").addEventListener("change",carregar);
+
+
+$("#exportar").addEventListener("click",()=>{
+  if(typeof XLSX==="undefined"){toast("Biblioteca de Excel não carregou. Recarregue a página.");return;}
+  const L=filtradas();if(!L.length){toast("Nada para exportar");return;}
+  const cab=["Data","Site","Equipe","Região","Coordenador","Inspetor","Categoria","NC","Criticidade","Atividade paralisada","Ação corretiva","Resolveu o problema?","Motivo (não resolveu)"];
+  const rows=L.map(l=>[fmtD(l.data),l.site,l.equipe,l.cc,tit(l.coord),tit(l.insp),CATS[l.cat]||l.cat,l.desc,SEVS[l.sev]||"",l.par?"Sim":"Não",l.acao,SIT[l.sit][0],l.motivo]);
+  const ws=XLSX.utils.aoa_to_sheet([cab].concat(rows));
+  ws["!cols"]=[{wch:11},{wch:12},{wch:30},{wch:8},{wch:24},{wch:24},{wch:20},{wch:50},{wch:12},{wch:12},{wch:50},{wch:16},{wch:50}];
+  ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:cab.length-1}})};
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Ações corretivas");
+  const d=new Date();XLSX.writeFile(wb,"acoes_corretivas_"+d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+".xlsx");
+  toast(L.length+" linha"+(L.length>1?"s exportadas":" exportada"));
+});
+
+carregar();
+})();
+</script>
+</body>
+</html>

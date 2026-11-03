@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registrar EHS - Gestão de EHS</title>
+<link rel="icon" type="image/png" href="/img/favicon (2).png (2).png"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  let s=null;
+  try{s=JSON.parse(localStorage.getItem("ehs.sessao")||sessionStorage.getItem("ehs.sessao")||"null");}catch(e){}
+  if(!s||!s.token){location.replace("index.html");return;}
+  window.SESSAO=s;
+})();
+</script>
+<script src="/script/regioes-acesso.js"></script>
+
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/dasboard.css">
+<style>
+.nc-det .campo > label,
+#rSemEhs .campo > label{white-space:nowrap}
+.nc-det .campo-res,
+#rSemEhs .campo-res{grid-column:span 2}
+[hidden]{display:none!important}
+input[type=checkbox]{width:14px;height:14px;margin:0}
+.tri button{padding:3px 9px;font-size:12px;min-height:0;min-width:0}
+.res-tipo{display:flex;flex-wrap:wrap;gap:14px 28px;margin-top:14px}
+.eq-info{margin-top:4px;line-height:1.4}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="topo-conteudo">
+    <a class="logo" href="painel.html"><img src="/img/logo_branco.png" alt="Logotipo"></a>
+    <nav class="menu" aria-label="Principal">
+      <ul>
+        <li><a href="painel.html">Painel</a></li>
+        <li><a href="registrarEhs.html" aria-current="page">Registrar EHS</a></li>
+        <li><a href="acoesCorretivas.html">Ações Corretivas</a></li>
+        <li><a href="analise.html">Análise de NC</a></li>
+        <li id="liRegioes" hidden><a href="/controleregiao.html">Controle de Região</a></li>
+        <li><a href="#" id="sair">Sair</a></li>
+        <li><span class="usuario" id="usu"></span></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="aviso" id="aviso" role="alert" hidden></div>
+<section id="vLista">
+  <h1>Registrar EHS</h1>
+  <div class="bloco">
+    <h2>Filtros</h2>
+    <div class="filtros">
+      <div class="campo"><label for="fBusca">Buscar colaborador</label><input type="text" id="fBusca" placeholder="Nome, login ou equipe"></div>
+      <div class="campo"><label for="fCc">Filtrar por Região</label><select name="centro_custo" id="fCc" data-multi></select></div>
+      <div class="campo"><label for="fUf">Filtrar por Estado de Atuação</label><select name="estado_atuacao" id="fUf" data-multi></select></div>
+      <div class="campo"><label for="fCoord">Filtrar por Coordenador</label><select name="coordenador" id="fCoord" data-multi></select></div>
+    </div>
+  </div>
+  <div class="bloco">
+  <div class="acoes" style="justify-content:space-between;margin-bottom:8px">
+  <h2 style="margin:0">Colaboradores <span class="small muted" id="qtd"></span></h2>
+  <button type="button" class="secundario" id="exportar">Exportar</button>
+  </div>
+    <p class="small muted" id="dica">Clique em um colaborador para registrar a inspeção.</p>
+    <ul class="colabs" id="colabs"></ul>
+  </div>
+</section>
+<section id="vDet" hidden>
+  <div class="cab-det">
+    <div><h1 id="dNome"></h1><div class="small muted" id="dInfo"></div></div>
+    <button type="button" class="secundario" id="voltar">← Voltar à lista</button>
+  </div>
+  <div class="reg">
+    <form class="bloco" id="form" novalidate>
+      <h2>Nova inspeção pré-atividade</h2>
+      <p class="small muted">Itens começam como conformes. Marque NC só no que falhou.</p>
+      <div class="form-topo">
+        <div>
+          <div class="fgrid">
+            <div class="campo"><label for="rData">Data</label><input type="date" id="rData"></div>
+            <div class="campo"><label for="rInsp">Inspetor (técnico SST)</label><input type="text" id="rInsp" readonly tabindex="-1" autocomplete="off"></div>
+          </div>
+          <div class="res-tipo">
+            <div>
+              <div class="eyebrow">Resultado do dia</div>
+              <div class="seg" id="rRes" role="group" aria-label="Resultado">
+                <button type="button" data-v="REALIZADO" aria-pressed="true">EHS realizado</button>
+                <button type="button" data-v="SEM_ATIVIDADE" aria-pressed="false">Sem atividade</button>
+                <button type="button" data-v="SEM_EHS" aria-pressed="false">Atividade sem EHS</button>
+              </div>
+            </div>
+            <div id="rTipoBox">
+              <div class="eyebrow">Tipo</div>
+              <div class="seg" id="rTipo" role="group" aria-label="Tipo">
+                <button type="button" data-v="TORREeSOLO" aria-pressed="true">Torre e Solo</button>
+                <button type="button" data-v="TORRE" aria-pressed="false">Torre</button>
+                <button type="button" data-v="SOLO" aria-pressed="false">Solo</button>
+              </div>
+            </div>
+          </div>
+          <div class="fgrid" id="rSiteRec" style="margin-top:14px">
+            <div class="campo"><label for="rSite">Site</label><input type="text" id="rSite" placeholder="Ex.: BACRV07" autocomplete="off"></div>
+            <div class="campo"><label for="rRec">Integrantes no EHS (obrigatório)</label><input type="number" id="rRec" min="1" max="10" inputmode="numeric" placeholder="Informe" required></div>
+            <div class="campo"><label for="rProj">Projeto (obrigatório)</label><select id="rProj" required></select></div>
+            <div class="campo"><label for="rIsdp">Login ISDP</label><input type="text" id="rIsdp" readonly tabindex="-1" autocomplete="off"></div>
+            <div class="campo"><label for="rDhClock">Data e horário do Clock'in (obrigatório)</label><input type="datetime-local" id="rDhClock" required></div>
+            <div class="campo"><label for="rDhEhs">Data e horário do EHS (obrigatório)</label><input type="datetime-local" id="rDhEhs" required></div>
+          </div>
+        </div>
+        <aside class="integ-box">
+          <h3>Integrantes da equipe</h3>
+          <div class="rec" id="dInteg"></div>
+        </aside>
+      </div>
+      <div id="rCampos">
+        <div id="rDiv" class="bloco" style="margin-top:12px" hidden>
+          <p class="err small" id="rDivTxt" style="margin:0 0 8px"></p>
+          <label class="chk"><input type="checkbox" id="rDivOk"> Confirmo o número informado e a abertura da NC</label>
+          <div class="campo" style="margin-top:8px"><label for="rDivSev">Criticidade da NC</label><select id="rDivSev"></select></div>
+          <div class="campo" style="margin-top:8px"><label for="rDivAcao">Ação corretiva (obrigatório)</label><input type="text" id="rDivAcao" placeholder="O que foi feito para corrigir"></div>
+          <div class="campo" style="margin-top:8px"><label for="rDivRes">Resolveu o problema?</label><select id="rDivRes"></select></div>
+          <div class="campo" id="rDivMotBox" style="margin-top:8px" hidden><label for="rDivMot">Por que não resolveu? (obrigatório)</label><input type="text" id="rDivMot" placeholder="Explique o motivo"></div>
+        </div>
+        <div id="rAtraso" class="bloco" style="margin-top:12px" hidden>
+          <p class="err small" id="rAtrasoTxt" style="margin:0 0 8px"></p>
+          <div class="fgrid">
+            <div class="campo wide"><label>Descrição da NC</label><input type="text" id="rAtrasoDesc" readonly tabindex="-1"></div>
+            <div class="campo"><label>Criticidade</label><input type="text" id="rAtrasoSev" readonly tabindex="-1"></div>
+            <div class="campo wide"><label>Ação corretiva</label><input type="text" id="rAtrasoAcao" readonly tabindex="-1"></div>
+            <div class="campo"><label>Resolveu o problema?</label><input type="text" value="Não" readonly tabindex="-1"></div>
+          </div>
+        </div>
+        <div class="fgrid" id="rSemEhs" style="margin-top:14px" hidden>
+          <div class="campo"><label for="rSemEhsSev">Criticidade da NC (atividade sem EHS)</label><select id="rSemEhsSev"></select></div>
+          <div class="campo wide"><label for="rSemEhsAcao">Ação corretiva (obrigatório)</label><input type="text" id="rSemEhsAcao" placeholder="O que foi feito para corrigir"></div>
+          <div class="campo"><label for="rSemEhsRes">Resolveu o problema?</label><select id="rSemEhsRes"></select></div>
+          <div class="campo wide" id="rSemEhsMotBox" hidden><label for="rSemEhsMot">Por que não resolveu? (obrigatório)</label><input type="text" id="rSemEhsMot" placeholder="Explique o motivo"></div>
+        </div>
+        <div id="rCheck"></div>
+        <div class="ck-group">
+          <div class="acoes" style="justify-content:space-between"><h3 style="margin:0">Outro problema</h3><button type="button" class="secundario pq" id="addOutro">Adicionar NC fora do checklist</button></div>
+          <div id="rOutros"></div>
+        </div>
+      </div>
+      <div class="campo" style="margin-top:16px"><label for="rObs">Observações</label><textarea id="rObs" placeholder="Contexto útil para quem vai tratar"></textarea></div>
+      <div class="rodape">
+        <span class="small muted" id="rResumo">Nenhuma NC marcada</span>
+        <div class="acoes"><button type="button" class="secundario" id="limpar">Limpar</button><button type="submit" class="primario">Registrar inspeção</button></div>
+      </div>
+      <p class="err" id="rErr" hidden></p>
+    </form>
+
+    <div class="lado">
+      <div class="bloco" id="blSem">
+        <h2>Equipes sem atividade</h2>
+        <p class="small muted">Marque de uma vez as equipes do mesmo coordenador paradas no dia. Quem já tem registro na data não aparece.</p>
+        <div class="campo" style="margin-top:8px"><label for="sData">Data</label><input type="date" id="sData"></div>
+        <div class="lista-mini" id="sLista"></div>
+        <div class="acoes" style="justify-content:space-between;margin-top:12px"><span class="small muted" id="sQtd"></span><button type="button" class="primario pq" id="sSalvar">Marcar sem atividade</button></div>
+      </div>
+      <div class="bloco">
+        <h2>Registros recentes</h2>
+        <div class="rec" id="recLista"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="/script/multiselect.js"></script>
+<script src="/script/equipe-temporaria.js"></script>
+<script>
+(function(){
+"use strict";
+const SES=window.SESSAO;if(!SES)return;
+const USU=SES.usuario||{};
+const ACESSO=window.ACESSO||{ADMIN:false,MINHAS:[],semRegiao:true,filtrar:()=>[],ve:()=>false};
+const FUNCOES_REGISTRO=["INSPETOR","INSPETOR SST","ADMIN"];
+const semAcento=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toUpperCase();
+const PODE=FUNCOES_REGISTRO.includes(semAcento(USU.funcao));
+const sair=()=>{try{localStorage.removeItem("ehs.sessao");sessionStorage.removeItem("ehs.sessao");localStorage.removeItem("ehs.cache.inicio");}catch(e){}location.replace("index.html");};
+const $=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const z=n=>String(n).padStart(2,"0");
+const hoje=()=>{const d=new Date();return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate());};
+const fmtD=i=>i?i.slice(8,10)+"/"+i.slice(5,7):"—";
+const tit=s=>String(s||"").toLowerCase().replace(/(^|\s)(\S)/g,(m,a,b)=>a+b.toUpperCase()).replace(/ (De|Da|Do|Dos|Das|E)(?= )/g,m=>m.toLowerCase());
+let tT;const toast=m=>{const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tT);tT=setTimeout(()=>t.classList.remove("on"),3000);};
+const API_URL = "https://script.google.com/macros/s/AKfycbxNjPQzn8kTv7-RAPOR8UOOCUJHnAEr-u78lNn-00QUgEgwD2aWGfI-NASbVJCRq0u52w/exec";
+const DEMO=[{equipe:"Marcelo Buratti (Jair Marcelino)- 3",cc:"CO",uf:"",coordenador:"",projeto:"",recursos:[
+ {nome:"MARCELO BURATTI",funcao:"LIDER",loginHuawei:"CO_PREMCELL_650",loginNokia:null},
+ {nome:"OTAVIO PINHEIRO DE SOUZA",funcao:"INSTALADOR",loginHuawei:"CO_PREMCELL_1004",loginNokia:null}]}];
+
+const USAR_TZ=false;
+
+const comTz=v=>(USAR_TZ&&v)?new Date(v).toISOString():v;
+const SEVS={CRITICA:"Crítica",ALTA:"Alta",MEDIA:"Média",BAIXA:"Baixa"};
+
+const LIMITE_MIN=30;
+const SEV_ATRASO="MEDIA";  
+const ACAO_ATRASO="NC aberta automaticamente pelo sistema";
+const MOTIVO_ATRASO="Prazo entre o Clock'in e o EHS excedido; não pode ser corrigido retroativamente";
+function atrasoEhs(){
+  if(S.res!=="REALIZADO")return null;
+  const c=$("#rDhClock").value,e=$("#rDhEhs").value;
+  if(!c||!e)return null;
+  const min=Math.round((new Date(e)-new Date(c))/60000);
+  return min>LIMITE_MIN?{min}:null;
+}
+function atualizaAtraso(){
+  const a=atrasoEhs();
+  $("#rAtraso").hidden=!a;
+  if(!a)return;
+  $("#rAtrasoTxt").textContent="Atenção: o EHS foi registrado "+a.min+" min após o Clock'in (limite: "+LIMITE_MIN+" min). Uma NC será aberta automaticamente e não pode ser alterada.";
+  $("#rAtrasoDesc").value="EHS realizado "+a.min+" min após o Clock'in (limite de "+LIMITE_MIN+" min)";
+  $("#rAtrasoSev").value=SEVS[SEV_ATRASO];
+  $("#rAtrasoAcao").value=ACAO_ATRASO;
+}
+
+const sevOpts=cur=>'<option value="">Selecione</option>'+Object.keys(SEVS).map(s=>'<option value="'+s+'"'+(cur===s?" selected":"")+'>'+SEVS[s]+'</option>').join("");
+const resOpts=cur=>'<option value="">Selecione</option><option value="SIM"'+(cur==="SIM"?" selected":"")+'>Sim</option><option value="NAO"'+(cur==="NAO"?" selected":"")+'>Não</option>';
+$("#rDivSev").innerHTML=sevOpts("");$("#rSemEhsSev").innerHTML=sevOpts("");
+$("#rDivRes").innerHTML=resOpts("");$("#rSemEhsRes").innerHTML=resOpts("");
+
+const PROJETOS=["56A0VD0","56A0T27","56A0M7N","56A0L1E","56A0NL9","56A0N38","56A0R8B","56A0FNV","56A0CP2","56A0NSV","56A0VTM"];
+$("#rProj").innerHTML='<option value="">Selecione</option>'+PROJETOS.map(p=>'<option value="'+p+'">'+p+'</option>').join("");
+
+const CATS={APR:"APR",EPI:"EPI/EPC",ALTURA:"Trabalho em altura",EQUIPE:"Equipe e habilitação",AREA:"Isolamento de área",VEICULO:"Veículo",EVIDENCIA:"Evidências (fotos)",PROCESSO:"Processo EHS",OUTRO:"Outros"};
+const ITENS=[
+ ["a1","APR","APR dentro da validade","APR vencida"],
+ ["a2","APR","APR emitida para este site","APR emitida para outro site"],
+ ["a3","APR","Avaliação de riscos preenchida","Avaliação de riscos não preenchida na APR"],
+ ["q1","EQUIPE","Dois torristas distintos","Mesmo técnico nas duas posições de torrista",1],
+ ["q2","EQUIPE","NR-35, NR-10 e ASO válidos","Treinamento ou ASO vencido"],
+ ["q3","EQUIPE","CNH válida do condutor","CNH irregular ou não apresentada"],
+ ["r1","AREA","Área corretamente isolada e sinalizada","Área sem isolamento ou sinalização"],
+ ["r2","AREA","Banner de sinalização devidamente fixado e em bom estado","Banner de sinalização solto, danificado ou ausente"],
+ ["e2","EPI","Vestimenta e luvas íntegras","Vestimenta ou luva danificada"],
+ ["e4","EPI","Óculos de segurança conforme padrão","Óculos de segurança fora do padrão ou ausente"],
+ ["e5","EPI","Capacete de solo em bom estado e devidamente fixado","Capacete de solo danificado ou mal fixado"],
+ ["e6","EPI","Capacete de altura em bom estado e devidamente fixado","Capacete de altura danificado ou mal fixado",1],
+ ["h1","EPI","Cinturão íntegro e ajustado","Cinturão danificado ou mal ajustado",1],
+ ["h2","EPI","Talabarte Y conectado corretamente","Talabarte Y posicionado incorretamente",1],
+ ["h6","EPI","Talabarte de posicionamento conectado corretamente","Talabarte de posicionamento conectado incorretamente",1],
+ ["h4","EPI","Linha de vida existente e trava-quedas fixado","Sem linha de vida ou trava-quedas",1],
+ ["h5","EPI","Kit de primeiros socorros conforme padrão","Kit de resgate ausente",1],
+ ["v1","VEICULO","Pneus em boas condições","Pneus em condição inadequada"],
+ ["v3","VEICULO","Condições gerais do veículo satisfatórias","Condições gerais do veículo insatisfatórias"]
+].map(a=>({id:a[0],cat:a[1],txt:a[2],nc:a[3],torre:!!a[4]}));
+
+$("#usu").textContent=(USU.nome||USU.login||"")+(USU.funcao?" · "+USU.funcao:"");
+$("#sair").addEventListener("click",e=>{e.preventDefault();sair();});
+{
+  const a=$("#aviso"),msg=[];
+  if(!PODE)msg.push("Seu perfil ("+(USU.funcao||"sem função")+") não tem permissão para registrar EHS. Apenas o perfil Inspetor registra. Você pode consultar a lista de colaboradores.");
+  if(ACESSO.semRegiao)msg.push("Nenhuma região foi atribuída ao seu usuário. Peça ao administrador.");
+  if(msg.length){a.textContent=msg.join(" ");a.hidden=false;}
+  if(!PODE)$("#dica").textContent="Consulta apenas: seu perfil não pode registrar inspeções.";
+}
+
+const norm=o=>{
+  const rs=(o.recursos||[]).map(r=>({nome:String(r.nome||"").trim().toUpperCase(),funcao:String(r.funcao||"").toUpperCase(),
+    huawei:String(r.loginHuawei||"").toUpperCase(),nokia:String(r.loginNokia||"").toUpperCase()}));
+  const l=rs.find(r=>r.funcao==="LIDER")||rs[0]||{};
+  return{nome:l.nome||String(o.equipe||"").trim().toUpperCase(),equipe:String(o.equipe||"").trim(),login:l.huawei||l.nokia||"",funcao:l.funcao||"",
+    uf:String(o.uf||"").toUpperCase(),coordenador:String(o.coordenador||"").toUpperCase(),
+    cc:String(o.cc||"").toUpperCase(),projeto:String(o.projeto||"").toUpperCase(),recursos:rs};
+};
+async function carregarColabs(){
+  if(!API_URL)return ACESSO.filtrar(DEMO.map(norm),"cc");
+  const r=await fetch(API_URL+"?action=colaboradores");
+  const txt=await r.text();
+  let j;
+  try{j=JSON.parse(txt);}
+  catch(e){throw new Error("O Apps Script não devolveu JSON (publique uma nova versão do Web App). Início da resposta: "+txt.slice(0,80));}
+  if(!j.ok)throw new Error(j.erro||"Falha ao ler colaboradores");
+  return ACESSO.filtrar((j.dados||[]).map(norm).filter(c=>c.nome||c.equipe),"cc");
+}
+
+let REG=[];
+const lerReg=()=>REG;
+async function carregarReg(){
+  if(!API_URL)return;
+  const r=await fetch(API_URL+"?action=registros&dias=60");const j=await r.json();
+  if(j.ok)REG=ACESSO.filtrar(j.dados||[],"cc");
+}
+const LS_INI="ehs.cache.inicio";
+
+async function buscarInicio(){
+  const r=await fetch(API_URL+"?action=inicio&dias=60");
+  const txt=await r.text();
+  let j;
+  try{j=JSON.parse(txt);}
+  catch(e){throw new Error("O Apps Script não devolveu JSON (publique uma nova versão do Web App). Início da resposta: "+txt.slice(0,80));}
+  if(!j.ok)throw new Error(j.erro||"Falha ao carregar dados iniciais");
+  return j;
+}
+
+function aplicar(j){
+  S.colabs=ACESSO.filtrar((j.colaboradores||[]).map(norm).filter(c=>c.nome||c.equipe),"cc");
+  if(j.registros)REG=ACESSO.filtrar(j.registros,"cc");
+  montaFiltros();
+  listar();
+}
+async function api(body){
+  body.token=SES.token;  
+  const r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});
+  const j=await r.json();
+  if(j&&j.codigo==="SESSAO")sair();
+  return j;
+}
+
+const S={colabs:[],sel:null,res:"REALIZADO",tipo:"TORRE",ck:{},outros:[]};
+const ckResumo=()=>{const o={};ITENS.forEach(i=>o[i.id]=(S.ck[i.id]||{}).v||"C");return o;};
+
+function opts(sel,vals,rot){
+  const c=MS.valores(sel);
+  sel.innerHTML='<option value="">'+rot+'</option>'+vals.map(v=>'<option>'+esc(v)+'</option>').join("");
+  Array.from(sel.options).forEach(o=>{o.selected=o.value!==""&&c.includes(o.value);});
+  MS.atualizar(sel);
+}
+const uniq=k=>Array.from(new Set(S.colabs.map(c=>c[k]).filter(Boolean))).sort();
+function montaFiltros(){opts($("#fCc"),uniq("cc"),"Todos");opts($("#fUf"),uniq("uf"),"Todos");opts($("#fCoord"),uniq("coordenador"),"Todos");}
+function filtrados(){
+  const q=$("#fBusca").value.trim().toUpperCase(),cc=MS.valores($("#fCc")),uf=MS.valores($("#fUf")),co=MS.valores($("#fCoord"));
+  return S.colabs.filter(c=>(!q||[c.nome,c.login,c.equipe].concat(c.recursos.map(r=>r.nome+" "+r.huawei+" "+r.nokia)).join(" ").toUpperCase().includes(q))&&(!cc.length||cc.includes(c.cc))&&(!uf.length||uf.includes(c.uf))&&(!co.length||co.includes(c.coordenador)));
+}
+function listar(){
+  const L=filtrados(),h=hoje(),reg=lerReg();
+  $("#qtd").textContent="· "+L.length+" de "+S.colabs.length;
+  $("#colabs").innerHTML=L.length?L.map(c=>{const r=reg.filter(x=>x.lider===c.nome&&x.data===h);
+    const st=!r.length?"":r.some(x=>x.ncs.some(n=>n.sev==="CRITICA"))?'<span class="pill crit">NC crítica hoje</span>':r.some(x=>x.ncs.length)?'<span class="pill nc">NC hoje</span>':'<span class="pill ok">Registrado hoje</span>';
+    return '<li><button type="button" class="colab" data-n="'+esc(c.nome)+'"><b>'+esc(tit(c.nome))+'</b><span class="small muted">'+esc(c.equipe||"Sem nome de equipe")+'</span><span class="small muted">'+esc(c.login)+' · '+c.recursos.length+' integrante'+(c.recursos.length>1?"s":"")+'</span><span class="small muted">'+[c.cc,c.uf,tit(c.coordenador)].filter(Boolean).map(esc).join(" · ")+'</span>'+st+'</button></li>';}).join(""):'<li class="vazio" style="grid-column:1/-1">Nenhum colaborador encontrado.</li>';
+}
+["fCc","fUf","fCoord"].forEach(i=>$("#"+i).addEventListener("change",listar));
+$("#fBusca").addEventListener("input",listar);
+$("#colabs").addEventListener("click",e=>{const b=e.target.closest(".colab");if(!b)return;abrir(b.dataset.n);});
+$("#exportar").addEventListener("click",()=>{
+  if(typeof XLSX==="undefined"){toast("Biblioteca de Excel não carregou. Verifique a conexão e recarregue.");return;}
+  const L=filtrados();
+  if(!L.length){toast("Nenhum colaborador para exportar");return;}
+  const h=hoje(),reg=lerReg();
+
+  const cab=["Equipe","Líder","Login","Região","UF","Coordenador","Projeto","Qtd integrantes","Integrantes","Status hoje"];
+  const linhas=L.map(c=>{
+    const r=reg.filter(x=>x.lider===c.nome&&x.data===h);
+    const st=!r.length?"Sem registro":r.some(x=>x.ncs.some(n=>n.sev==="CRITICA"))?"NC crítica":r.some(x=>x.ncs.length)?"NC":"Registrado";
+    const integ=c.recursos.map(x=>tit(x.nome)+" ("+tit(x.funcao)+")"+((x.huawei||x.nokia)?" - "+[x.huawei,x.nokia].filter(Boolean).join("/"):"")).join(" | ");
+    return [c.equipe,tit(c.nome),c.login,c.cc,c.uf,tit(c.coordenador),c.projeto,c.recursos.length,integ,st];
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet([cab].concat(linhas));
+  ws["!cols"]=[{wch:34},{wch:26},{wch:18},{wch:10},{wch:6},{wch:26},{wch:14},{wch:10},{wch:70},{wch:14}];
+  ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:linhas.length,c:cab.length-1}})};
+  ws["!freeze"]={xSplit:0,ySplit:1};
+  const f=[["Filtro","Valor"],
+    ["Busca",$("#fBusca").value||"Todos"],
+    ["Região",MS.valores($("#fCc")).join(", ")||"Todos"],
+    ["Estado de Atuação",MS.valores($("#fUf")).join(", ")||"Todos"],
+    ["Coordenador",MS.valores($("#fCoord")).map(tit).join(", ")||"Todos"],
+    ["Exportado em",new Date().toLocaleString("pt-BR")],
+    ["Total",L.length+" de "+S.colabs.length]];
+  const wf=XLSX.utils.aoa_to_sheet(f);wf["!cols"]=[{wch:20},{wch:34}];
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Colaboradores");
+  XLSX.utils.book_append_sheet(wb,wf,"Filtros");
+  XLSX.writeFile(wb,"colaboradores_ehs_"+h+".xlsx");
+  toast(L.length+" colaborador"+(L.length>1?"es exportados":" exportado"));
+});
+function abrir(nome){const c=S.colabs.find(x=>x.nome===nome);if(!c)return;S.sel=c;
+  $("#vLista").hidden=true;$("#vDet").hidden=false;
+  $("#dNome").textContent=tit(c.nome);
+  $("#dInfo").textContent=[c.equipe,c.cc,c.uf,c.coordenador?"Coordenador "+tit(c.coordenador):""].filter(Boolean).join(" · ");
+  $("#dInteg").innerHTML=c.recursos.map(r=>'<div><div><b>'+esc(tit(r.nome))+'</b> <span class="small muted">'+esc(tit(r.funcao))+'</span></div><div class="small muted">'+esc([r.huawei&&"Huawei: "+r.huawei,r.nokia&&"Nokia: "+r.nokia].filter(Boolean).join(" · ")||"Sem login")+'</div></div>').join("");
+  zerar(false);$("#sData").value=hoje();
+  $("#form").hidden=!PODE;$("#blSem").hidden=!PODE;  
+  renderSem();renderRec();carregarEquipes();scrollTo(0,0);}
+$("#voltar").addEventListener("click",()=>{S.sel=null;$("#vDet").hidden=true;$("#vLista").hidden=false;listar();carregarReg().catch(()=>{}).then(listar);});
+
+function seg(id,cb){$("#"+id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;$$("#"+id+" button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));cb(b.dataset.v);});}
+const segSet=(id,v)=>$$("#"+id+" button").forEach(x=>x.setAttribute("aria-pressed",String(x.dataset.v===v)));
+seg("rRes",v=>{S.res=v;$("#rCampos").hidden=v==="SEM_ATIVIDADE";$("#rTipoBox").hidden=v==="SEM_ATIVIDADE";$("#rSiteRec").hidden=v==="SEM_ATIVIDADE";$("#rCheck").hidden=v!=="REALIZADO";$("#rSemEhs").hidden=v!=="SEM_EHS";atualizaDiv();});
+seg("rTipo",v=>{S.tipo=v;monta();});
+
+
+function divergencia(){
+  if(window.EquipeTemp&&EquipeTemp.ativo())return null;
+  if(!S.sel||S.res==="SEM_ATIVIDADE")return null;
+  const m=+$("#rRec").value;if(!m)return null;
+  const n=S.sel.recursos.length;
+  return m!==n?{m,n}:null;
+}
+function atualizaDiv(){
+  const d=divergencia();
+  $("#rDiv").hidden=!d;
+  if(d)$("#rDivTxt").textContent="Atenção: a equipe cadastrada tem "+d.n+" integrante"+(d.n>1?"s":"")+" e você informou "+d.m+". Confirme para registrar; será aberta uma NC por divergência.";
+  else{$("#rDivOk").checked=false;$("#rDivSev").value="";$("#rDivAcao").value="";$("#rDivRes").value="";$("#rDivMot").value="";$("#rDivMotBox").hidden=true;}
+  resumo();
+}
+$("#rRec").addEventListener("input",atualizaDiv);
+
+["rDhClock","rDhEhs"].forEach(id=>["input","change"].forEach(ev=>$("#"+id).addEventListener(ev,resumo)));
+$("#rDivSev").addEventListener("change",resumo);
+$("#rSemEhsSev").addEventListener("change",resumo);
+
+function motivoToggle(selId,boxId,inpId){
+  const box=$("#"+boxId),nao=$("#"+selId).value==="NAO";
+  box.hidden=!nao;if(!nao)$("#"+inpId).value="";
+}
+$("#rDivRes").addEventListener("change",()=>motivoToggle("rDivRes","rDivMotBox","rDivMot"));
+$("#rSemEhsRes").addEventListener("change",()=>motivoToggle("rSemEhsRes","rSemEhsMotBox","rSemEhsMot"));
+
+function monta(){let h="";const g={};ITENS.forEach(i=>(g[i.cat]=g[i.cat]||[]).push(i));
+  Object.keys(g).forEach(c=>{h+='<div class="ck-group"><h3>'+CATS[c]+(c==="EPI"&&S.tipo==="SOLO"?' <span class="small muted">itens de altura não se aplicam em solo</span>':"")+'</h3>';
+    g[c].forEach(i=>{let st=S.ck[i.id];if(!st)st=S.ck[i.id]={v:"C"};
+      if(i.torre&&S.tipo==="SOLO"&&st.v!=="NC")st.v="NA";if(i.torre&&S.tipo==="TORRE"&&st.v==="NA"&&!st.man)st.v="C";
+      h+='<div class="ck-item" data-i="'+i.id+'"><div>'+esc(i.txt)+'</div><div class="tri">'+["C","NC","NA"].map(v=>'<button type="button" data-v="'+v+'" aria-pressed="'+(st.v===v)+'">'+(v==="C"?"OK":v)+'</button>').join("")+'</div>'+(st.v==="NC"?ncCampos("ck_"+i.id,st,i):"")+'</div>';});
+    h+="</div>";});
+  $("#rCheck").innerHTML=h;resumo();}
+function ncCampos(p,st,i){if(st.sev==null)st.sev="";if(st.desc==null)st.desc=i.nc;if(st.par==null)st.par=false;if(st.acao==null)st.acao="";if(st.resolvido==null)st.resolvido="";if(st.motivo==null)st.motivo="";
+  return '<div class="nc-det" data-p="'+p+'"><div class="campo wide"><label>Descrição da NC</label><input type="text" data-k="desc" value="'+esc(st.desc)+'"></div>'+
+   '<div class="campo"><label>Criticidade</label><select data-k="sev">'+sevOpts(st.sev)+'</select></div>'+
+   '<div class="campo" style="grid-column:span 2"><label>Ação corretiva (obrigatório)</label><input type="text" data-k="acao" value="'+esc(st.acao)+'" placeholder="O que foi feito para corrigir"></div>'+
+   '<div class="campo"><label>Resolveu o problema?</label><select data-k="resolvido">'+resOpts(st.resolvido)+'</select></div>'+
+   (st.resolvido==="NAO"?'<div class="campo wide"><label>Por que não resolveu? (obrigatório)</label><input type="text" data-k="motivo" value="'+esc(st.motivo)+'" placeholder="Explique o motivo"></div>':"")+
+   '<label class="chk"><input type="checkbox" data-k="par"'+(st.par?" checked":"")+'> Atividade paralisada</label></div>';}
+$("#rCheck").addEventListener("click",e=>{const b=e.target.closest(".tri button");if(!b)return;const st=S.ck[b.closest(".ck-item").dataset.i];st.v=b.dataset.v;st.man=true;monta();});
+function liga(box,get,re){const h=e=>{const d=e.target.closest(".nc-det");if(!d||!e.target.dataset.k)return;const st=get(d.dataset.p);if(!st)return;st[e.target.dataset.k]=e.target.type==="checkbox"?e.target.checked:e.target.value;if(e.target.dataset.k==="sev")resumo();if(e.target.dataset.k==="resolvido"&&re)re();};box.addEventListener("input",h);box.addEventListener("change",h);}
+liga($("#rCheck"),p=>S.ck[p.replace("ck_","")],monta);liga($("#rOutros"),p=>S.outros[+p.replace("ot_","")],montaOutros);
+function montaOutros(){$("#rOutros").innerHTML=S.outros.map((o,x)=>'<div class="nc-det" data-p="ot_'+x+'" style="margin-top:8px"><div class="campo"><label>Categoria</label><select data-k="cat">'+Object.keys(CATS).filter(k=>k!=="PROCESSO").map(k=>'<option value="'+k+'"'+(o.cat===k?" selected":"")+'>'+CATS[k]+'</option>').join("")+'</select></div>'+
+  '<div class="campo"><label>Criticidade</label><select data-k="sev">'+sevOpts(o.sev)+'</select></div>'+
+  '<div class="campo wide"><label>Descrição da NC</label><input type="text" data-k="desc" value="'+esc(o.desc)+'" placeholder="Descreva o desvio"></div>'+
+  '<div class="campo wide"><label>Ação corretiva (obrigatório)</label><input type="text" data-k="acao" value="'+esc(o.acao)+'" placeholder="O que foi feito para corrigir"></div>'+
+  '<div class="campo"><label>Resolveu o problema?</label><select data-k="resolvido">'+resOpts(o.resolvido)+'</select></div>'+
+  (o.resolvido==="NAO"?'<div class="campo wide"><label>Por que não resolveu? (obrigatório)</label><input type="text" data-k="motivo" value="'+esc(o.motivo||"")+'" placeholder="Explique o motivo"></div>':"")+
+  '<div class="acoes wide" style="justify-content:space-between"><label class="chk"><input type="checkbox" data-k="par"'+(o.par?" checked":"")+'> Atividade paralisada</label><button type="button" class="perigo pq" data-rm="'+x+'">Remover</button></div></div>').join("");resumo();}
+$("#addOutro").addEventListener("click",()=>{S.outros.push({cat:"OUTRO",sev:"",desc:"",acao:"",resolvido:"",motivo:"",par:false});montaOutros();});
+$("#rOutros").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(!b)return;S.outros.splice(+b.dataset.rm,1);montaOutros();});
+
+function ncsForm(){
+  if(S.res==="SEM_ATIVIDADE")return[];
+  const o=[];
+  if(S.res==="SEM_EHS")o.push({item:"p1",cat:"PROCESSO",sev:$("#rSemEhsSev").value,desc:"Atividade iniciada sem EHS pré-atividade",acao:$("#rSemEhsAcao").value.trim(),resolvido:$("#rSemEhsRes").value,motivo:$("#rSemEhsMot").value.trim(),par:true});
+  else{
+    ITENS.forEach(i=>{const s=S.ck[i.id];if(s&&s.v==="NC")o.push({item:i.id,cat:i.cat,sev:s.sev||"",desc:(s.desc||i.nc).trim(),acao:(s.acao||"").trim(),resolvido:s.resolvido||"",motivo:(s.motivo||"").trim(),par:!!s.par});});
+    S.outros.forEach(x=>o.push({item:"x0",cat:x.cat,sev:x.sev||"",desc:(x.desc||"").trim(),acao:(x.acao||"").trim(),resolvido:x.resolvido||"",motivo:(x.motivo||"").trim(),par:!!x.par}));
+  }
+  const d=divergencia();
+  if(d)o.push({item:"p2",cat:"EQUIPE",sev:$("#rDivSev").value,desc:"Número de integrantes no EHS ("+d.m+") diverge do cadastro da equipe ("+d.n+")",acao:$("#rDivAcao").value.trim(),resolvido:$("#rDivRes").value,motivo:$("#rDivMot").value.trim(),par:false});
+  const at=atrasoEhs();
+  if(at)o.push({item:"p3",cat:"PROCESSO",sev:SEV_ATRASO,desc:"EHS realizado "+at.min+" min após o Clock'in (limite de "+LIMITE_MIN+" min)",acao:ACAO_ATRASO,resolvido:"NAO",motivo:MOTIVO_ATRASO,par:false});
+  o.forEach(n=>{if(n.resolvido!=="NAO")n.motivo="";});
+  return o;}
+function resumo(){atualizaAtraso();const n=ncsForm(),c=n.filter(x=>x.sev==="CRITICA").length;
+  $("#rResumo").innerHTML=S.res==="SEM_ATIVIDADE"?"Equipe sem atividade no dia":S.res==="SEM_EHS"?'<span class="err">Vai abrir NC: atividade sem EHS'+(n.length>1?" + divergência de integrantes":"")+'</span>':n.length?"<b>"+n.length+" NC"+(n.length>1?"s":"")+"</b> serão abertas"+(c?' · <span class="err">'+c+" crítica"+(c>1?"s":"")+"</span>":""):"Nenhuma NC marcada";}
+function zerar(manterData){const d=$("#rData").value;$("#form").reset();$("#rData").value=manterData&&d?d:hoje();
+  $("#rInsp").value=USU.nome||"";  
+  $("#rIsdp").value=(S.sel&&S.sel.login)||""; 
+  S.res="REALIZADO";S.tipo="TORRE";S.ck={};S.outros=[];segSet("rRes","REALIZADO");segSet("rTipo","TORRE");$("#rCampos").hidden=false;$("#rTipoBox").hidden=false;$("#rSiteRec").hidden=false;$("#rCheck").hidden=false;$("#rSemEhs").hidden=true;$("#rSemEhsMotBox").hidden=true;$("#rDiv").hidden=true;$("#rDivMotBox").hidden=true;$("#rErr").hidden=true;monta();montaOutros();}
+$("#limpar").addEventListener("click",()=>{zerar(false);});
+
+$("#form").addEventListener("submit",e=>{e.preventDefault();if(!PODE)return;const err=$("#rErr"),c=S.sel;const fail=m=>{err.textContent=m;err.hidden=false;};err.hidden=true;
+  const data=$("#rData").value,site=$("#rSite").value.trim().toUpperCase(),insp=USU.nome||"";
+  if(!data)return fail("Informe a data da inspeção.");
+  if(!insp)return fail("Seu usuário não tem nome cadastrado na aba usuarios.");
+  if(!ACESSO.ve(c.cc))return fail("Você não tem permissão para registrar nesta região.");
+  if(S.res==="SEM_ATIVIDADE")return gravar([{data,lider:c.nome,login:c.login,coordenador:c.coordenador,uf:c.uf,cc:c.cc,resultado:"SEM_ATIVIDADE",inspetor:insp,ncs:[]}],"Equipe marcada sem atividade em "+fmtD(data));
+  if(!site)return fail("Informe o site.");
+  const proj=$("#rProj").value;
+  if(!proj)return fail("Selecione o projeto.");
+  const loginIsdp=$("#rIsdp").value.trim();
+  const dataHoraEhs=$("#rDhEhs").value,dataHoraClockin=$("#rDhClock").value;
+  if(!dataHoraEhs)return fail("Informe a data e o horário do EHS.");
+  if(!dataHoraClockin)return fail("Informe a data e o horário do Clock'in.");
+  const tmp=window.EquipeTemp&&EquipeTemp.validar();if(tmp)return fail(tmp);
+  const rec=+$("#rRec").value;
+  if(!rec||rec<1||rec>10)return fail("Informe o número de integrantes no EHS (de 1 a 10).");
+  if(divergencia()&&!$("#rDivOk").checked)return fail("O número de integrantes diverge do cadastro da equipe. Confirme a divergência para continuar.");
+  const ncs=ncsForm();if(ncs.some(n=>!n.desc))return fail("Toda NC precisa de descrição.");
+  if(ncs.some(n=>!n.sev))return fail("Toda NC precisa de criticidade.");
+  if(ncs.some(n=>!n.acao))return fail("Toda NC precisa de ação corretiva.");
+  if(ncs.some(n=>!n.resolvido))return fail("Informe se a ação corretiva resolveu o problema em todas as NCs.");
+  if(ncs.some(n=>n.resolvido==="NAO"&&!n.motivo))return fail("Informe por que a ação corretiva não resolveu o problema.");
+  gravar([{data,lider:c.nome,login:c.login,coordenador:c.coordenador,uf:c.uf,cc:c.cc,resultado:S.res,site,tipo:S.tipo,projeto:proj,loginIsdp,dataHoraEhs:comTz(dataHoraEhs),dataHoraClockin:comTz(dataHoraClockin),ck:ckResumo(),recursos:rec,inspetor:insp,obs:$("#rObs").value.trim(),ncs}].map(r=>Object.assign({},r,window.EquipeTemp?EquipeTemp.aplicar(r):{})), /*TEMP-EQUIPE*/
+    ncs.length?"Inspeção registrada · "+ncs.length+" NC"+(ncs.length>1?"s":""):"Inspeção registrada sem NC");});
+
+async function gravar(novos,msg){
+  if(!PODE)return;
+  novos.forEach(n=>{n.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);n.criadoEm=new Date().toISOString();
+    n.equipe=(S.colabs.find(x=>x.nome===n.lider)||{}).equipe||"";});
+  const bt=$$("#form button[type=submit],#sSalvar");bt.forEach(b=>b.disabled=true);
+  try{
+    if(API_URL){const r=await api({action:"salvar",registros:novos});if(!r.ok)throw new Error(r.erro||"Falha ao salvar");}
+    REG=REG.concat(novos);
+    window.EquipeTemp&&EquipeTemp.salvou(novos);
+    toast(msg);zerar(true);renderSem();renderRec();
+  }catch(e){$("#rErr").textContent="Não foi possível salvar na planilha: "+e.message;$("#rErr").hidden=false;}
+  finally{bt.forEach(b=>b.disabled=false);}
+}
+
+function renderSem(){const d=$("#sData").value||hoje(),c=S.sel;if(!c)return;const reg=lerReg().filter(r=>r.data===d),ja=new Set(reg.map(r=>r.lider));
+  const marc=new Set($$("#sLista input:checked").map(x=>x.value));
+  const gp=x=>x.coordenador||x.cc;
+  const L=S.colabs.filter(x=>gp(x)===gp(c)&&!ja.has(x.nome));
+  $("#sLista").innerHTML=L.length?L.map(x=>'<label><input type="checkbox" value="'+esc(x.nome)+'"'+(marc.has(x.nome)?" checked":"")+'> '+esc(tit(x.nome))+'</label>').join(""):'<p class="small muted">Todas as equipes já têm registro em '+fmtD(d)+'.</p>';
+  $("#sQtd").textContent=ja.size+" já registradas em "+fmtD(d);}
+$("#sData").addEventListener("change",renderSem);
+$("#sSalvar").addEventListener("click",()=>{if(!PODE)return;const d=$("#sData").value,sel=$$("#sLista input:checked").map(x=>x.value);if(!d||!sel.length){toast("Selecione ao menos uma equipe");return;}
+  const novos=sel.map(n=>S.colabs.find(x=>x.nome===n)).map(x=>({data:d,lider:x.nome,login:x.login,coordenador:x.coordenador,uf:x.uf,cc:x.cc,resultado:"SEM_ATIVIDADE",inspetor:USU.nome||"",ncs:[]}));
+  gravar(novos,sel.length+" equipe"+(sel.length>1?"s marcadas":" marcada")+" sem atividade");});
+
+let conf=null;
+let EQ_MAP={};
+async function carregarEquipes(){
+  if(!(window.EquipeTemp&&EquipeTemp.buscar))return;
+  try{EQ_MAP=Object.assign(EQ_MAP,await EquipeTemp.buscar(60));renderRec();}catch(e){}
+}
+function equipeInformada(r){
+  let l=[];
+  if(r._et&&r._et.length)l=r._et;
+  else if(EQ_MAP[r.id]&&EQ_MAP[r.id].length)l=EQ_MAP[r.id];
+  else{
+    const re=/\[Equipe informada manualmente:\s*([^\]]*)\]/i;
+    const chaves=["observação_geral","observacao_geral","observacaoGeral","observação","observacao","obs","observacoes","observações"];
+    let m=null;
+    for(const k of chaves){if(typeof r[k]==="string"&&(m=re.exec(r[k])))break;}
+    if(!m)for(const k in r){if(typeof r[k]==="string"&&(m=re.exec(r[k])))break;}
+    if(m)l=m[1].split(",").map(s=>s.trim()).filter(Boolean);
+  }
+  return l.length?'<div class="small eq-info"><b>Equipe informada ('+l.length+'):</b> '+l.map(x=>esc(tit(x))).join(", ")+'</div>':"";
+}
+
+const achaDH=(r,tipo)=>{
+  for(const k in r){
+    const n=k.toLowerCase().replace(/[^a-z]/g,"");
+    const ok=tipo==="clock"?n.includes("clock"):(n.includes("ehs")&&!n.includes("clock")&&(n.includes("hora")||n.includes("data")||n.includes("dh")));
+    if(ok&&r[k])return r[k];
+  }
+  return "";
+};
+const fmtDH=s=>{
+  if(!s)return"";
+  if(typeof s==="number")s=new Date(s).toISOString();
+  s=String(s).trim();
+  let m=/^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}:\d{2})/.exec(s);         
+  if(m)return m[1]+"/"+m[2]+" "+m[4];
+  s=s.replace(" ","T");
+  if(/(Z|[+-]\d{2}(:?\d{2})?)$/.test(s)){                             
+    const d=new Date(s);
+    return isNaN(d)?"":z(d.getDate())+"/"+z(d.getMonth()+1)+" "+z(d.getHours())+":"+z(d.getMinutes());
+  }
+  return s.length>=16?s.slice(8,10)+"/"+s.slice(5,7)+" "+s.slice(11,16):"";
+};
+const horarios=r=>{
+  const c=fmtDH(r.dataHoraClockin),e=fmtDH(r.dataHoraEhs);
+  return(c||e)?'<div style="display:block;margin-top:4px;font-size:12px;color:#555">'+(c?"Clock'in: "+c:"")+(c&&e?" · ":"")+(e?"EHS: "+e:"")+'</div>':"";
+};
+
+function renderRec(){if(!S.sel)return;const L=lerReg().filter(r=>r.lider===S.sel.nome).sort((a,b)=>b.data.localeCompare(a.data)||(b.criadoEm||"").localeCompare(a.criadoEm||"")).slice(0,10);
+  if(L.length&&!window.__dbg){window.__dbg=1;console.log("Registro exemplo:",L[0]);}   // DEBUG: pode remover depois
+  $("#recLista").innerHTML=L.length?L.map(r=>{const rot=r.resultado==="SEM_ATIVIDADE"?"Sem atividade":r.resultado==="SEM_EHS"?"Sem EHS":(r.tipo==="SOLO"?"Solo":"Torre");
+    const bt=!PODE?"":(conf===r.id?'<button class="perigo pq" data-del="'+r.id+'">Confirmar</button>':'<button class="secundario pq" data-ask="'+r.id+'">Excluir</button>');
+    return '<div><div><b>'+fmtD(r.data)+'</b> <span class="small muted">'+esc(r.site||"")+" · "+rot+(r.projeto?" · "+esc(r.projeto):"")+(r.inspetor?" · "+esc(r.inspetor):"")+'</span>'+equipeInformada(r)+horarios(r)+'</div><div style="text-align:right">'+
+    (r.ncs.length?'<span class="pill nc">'+r.ncs.length+' NC</span>':'<span class="pill ok">OK</span>')+'<div style="margin-top:4px">'+bt+'</div></div></div>';}).join(""):'<div class="vazio">Nenhum registro deste colaborador.</div>';}
+$("#recLista").addEventListener("click",async e=>{if(!PODE)return;const a=e.target.closest("[data-ask]");if(a){conf=a.dataset.ask;renderRec();return;}
+  const d=e.target.closest("[data-del]");if(!d)return;conf=null;
+  try{
+    if(API_URL){const r=await api({action:"excluir",id:d.dataset.del});if(!r.ok)throw new Error(r.erro||"registro não encontrado");}
+    REG=REG.filter(r=>r.id!==d.dataset.del);toast("Registro excluído");renderRec();renderSem();
+  }catch(x){toast("Erro ao excluir: "+x.message);renderRec();}
+});
+
+(async function(){
+  if(!API_URL){aplicar({colaboradores:DEMO});return;}
+  let cache=null;
+  try{cache=JSON.parse(localStorage.getItem(LS_INI)||"null");}catch(e){}
+  if(cache&&cache.colaboradores&&cache.colaboradores.length)aplicar(cache); 
+  else $("#colabs").innerHTML='<li class="vazio" style="grid-column:1/-1">Carregando colaboradores…</li>';
+  try{
+    const j=await buscarInicio();                                       
+    try{localStorage.setItem(LS_INI,JSON.stringify({colaboradores:j.colaboradores,projetos:j.projetos}));}catch(e){}
+    aplicar(j);
+  }catch(e){
+    if(!S.colabs.length)$("#colabs").innerHTML='<li class="vazio err" style="grid-column:1/-1">Não foi possível carregar os colaboradores: '+esc(e.message)+'</li>';
+  }
+})();
+})();
+</script>
+</body>
+</html>

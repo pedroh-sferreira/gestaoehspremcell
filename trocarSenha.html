@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Alterar senha | Gestão de EHS</title>
+
+    <link rel="icon" type="image/png" href="/img/favicon (2).png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #F2F2F2;
+            padding: 20px;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 420px;
+            background: #FFFFFF;
+            border-radius: 14px;
+            padding: 40px;
+            box-shadow: 0 10px 35px rgba(35, 61, 140, 0.15);
+            border: 1px solid #ADB8D9;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 26px;
+        }
+
+        .logo-container img {
+            max-width: 200px;
+            max-height: 80px;
+            object-fit: contain;
+        }
+
+        .title {
+            text-align: center;
+            color: #233D8C;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6F7894;
+            font-size: 14px;
+            margin-bottom: 26px;
+            line-height: 1.4;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group label {
+            display: block;
+            color: #233D8C;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .input-group input {
+            width: 100%;
+            height: 48px;
+            padding: 0 15px;
+            border: 1px solid #ADB8D9;
+            border-radius: 8px;
+            background: #F2F2F2;
+            color: #233D8C;
+            font-size: 15px;
+            outline: none;
+            transition: 0.2s ease;
+        }
+
+        .input-group input:focus {
+            border-color: #2E4CA6;
+            background: #FFFFFF;
+            box-shadow: 0 0 0 3px rgba(46, 76, 166, 0.12);
+        }
+
+        .dica {
+            font-size: 12px;
+            color: #6F7894;
+            margin-top: 6px;
+        }
+
+        .msg {
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .msg[hidden] { display: none; }
+
+        .msg.err { color: #C42B2B; background: #F8E1DF; }
+        .msg.ok  { color: #1E7B3A; background: #E1F3E7; }
+
+        .btn {
+            width: 100%;
+            height: 50px;
+            border: none;
+            border-radius: 8px;
+            background: #233D8C;
+            color: #FFFFFF;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #2E4CA6;
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(35, 61, 140, 0.25);
+        }
+
+        .btn:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 18px;
+            font-size: 13px;
+        }
+
+        .links a {
+            color: #59637E;
+            text-decoration: none;
+        }
+
+        .links a[hidden] { display: none; }
+
+        .links a:hover { color: #233D8C; text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            .box { padding: 30px 25px; }
+            .title { font-size: 21px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="logo-container">
+            <img src="/img/logo_azul.png" alt="Logo da Empresa">
+        </div>
+        <h1 class="title" id="titulo">Alterar senha</h1>
+        <p class="subtitle" id="sub">Informe sua senha atual e escolha uma nova senha.</p>
+
+        <form id="formSenha" novalidate>
+            <div class="input-group">
+                <label for="atual">Senha atual</label>
+                <input type="password" id="atual" placeholder="Digite a senha atual" autocomplete="current-password">
+            </div>
+
+            <div class="input-group">
+                <label for="nova">Nova senha</label>
+                <input type="password" id="nova" placeholder="Mínimo de 8 caracteres" autocomplete="new-password">
+                <p class="dica">Use pelo menos 8 caracteres. Não use seu usuário como senha.</p>
+            </div>
+
+            <div class="input-group">
+                <label for="conf">Confirmar nova senha</label>
+                <input type="password" id="conf" placeholder="Repita a nova senha" autocomplete="new-password">
+            </div>
+
+            <p class="msg err" id="err" role="alert" hidden></p>
+            <p class="msg ok" id="ok" role="status" hidden></p>
+
+            <button type="submit" class="btn" id="btn">SALVAR NOVA SENHA</button>
+        </form>
+
+        <div class="links">
+            <a href="painel.html" id="linkVoltar">Voltar ao painel</a>
+            <a href="#" id="linkSair">Sair</a>
+        </div>
+    </div>
+
+<script>
+(function () {
+    "use strict";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxIWkTRIDUxOQn-jck_wbDz6nRQhwmIXekt9RisXLwM41DEfiAPdMh4fdklM_HGYHfNgQ/exec";
+    const LOGIN = "index.html";    
+    const DESTINO = "painel.html";
+    const CHAVE = "ehs.sessao";
+    const SENHA_MIN = 8;
+    const $ = s => document.querySelector(s);
+    async function api(body) {
+        const r = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(body)
+        });
+        const txt = await r.text();
+        try { return JSON.parse(txt); }
+        catch (e) { throw new Error("O servidor não devolveu JSON. Publique uma nova versão do Web App."); }
+    }
+    function lerSessao() {
+        try {
+            return JSON.parse(localStorage.getItem(CHAVE) || sessionStorage.getItem(CHAVE) || "null");
+        } catch (e) { return null; }
+    }
+
+    function gravarSessao(s) {
+        const store = localStorage.getItem(CHAVE) ? localStorage : sessionStorage;
+        store.setItem(CHAVE, JSON.stringify(s));
+    }
+
+    function limparSessao() {
+        try { localStorage.removeItem(CHAVE); sessionStorage.removeItem(CHAVE); } catch (e) {}
+    }
+
+    const sessao = lerSessao();
+    if (!sessao || !sessao.token) { location.replace(LOGIN); return; }
+    const obrigatoria = !!(sessao.usuario && sessao.usuario.trocarSenha);
+    if (obrigatoria) {
+        $("#titulo").textContent = "Crie sua nova senha";
+        $("#sub").textContent = "Este é seu primeiro acesso (ou sua senha foi redefinida). Crie uma nova senha para continuar.";
+        $("#linkVoltar").hidden = true;
+    }
+    $("#linkSair").addEventListener("click", async function (e) {
+        e.preventDefault();
+        try { await api({ action: "logout", token: sessao.token }); } catch (x) {}
+        limparSessao();
+        location.replace(LOGIN);
+    });
+    $("#formSenha").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const err = $("#err"), ok = $("#ok"), btn = $("#btn");
+        err.hidden = true; ok.hidden = true;
+        const atual = $("#atual").value, nova = $("#nova").value, conf = $("#conf").value;
+        if (!atual || !nova || !conf) {
+            err.textContent = "Preencha todos os campos.";
+            err.hidden = false;
+            return;
+        }
+        if (nova.length < SENHA_MIN) {
+            err.textContent = "A nova senha deve ter ao menos " + SENHA_MIN + " caracteres.";
+            err.hidden = false;
+            return;
+        }
+        if (nova !== conf) {
+            err.textContent = "A confirmação não confere com a nova senha.";
+            err.hidden = false;
+            return;
+        }
+        if (nova === atual) {
+            err.textContent = "A nova senha deve ser diferente da atual.";
+            err.hidden = false;
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "SALVANDO...";
+        try {
+            const j = await api({ action: "trocarSenha", token: sessao.token, atual: atual, nova: nova });
+            if (!j.ok) {
+                if (j.codigo === "SESSAO") { limparSessao(); location.replace(LOGIN); return; }
+                throw new Error(j.erro || "Não foi possível alterar a senha.");
+            }
+            sessao.usuario = Object.assign({}, sessao.usuario, j.usuario || {}, { trocarSenha: false });
+            gravarSessao(sessao);
+            ok.textContent = "Senha alterada com sucesso! Redirecionando...";
+            ok.hidden = false;
+            $("#formSenha").querySelectorAll("input").forEach(i => i.disabled = true);
+            setTimeout(() => location.replace(DESTINO), 1200);
+        } catch (x) {
+            err.textContent = x.message;
+            err.hidden = false;
+            btn.disabled = false;
+            btn.textContent = "SALVAR NOVA SENHA";
+            $("#atual").focus();
+        }
+    });
+})();
+</script>
+</body>
+</html>
