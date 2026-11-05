@@ -39,6 +39,7 @@
         if (s.startsWith('baix')) return 'Baixa';
         return 'Sem severidade';
     };
+
     window.renderGraficos = function (lista, grupos) {
         let el = $('graficos');
         if (!el) {
@@ -48,30 +49,52 @@
             el.setAttribute('aria-label', 'Gráficos');
             $('rankings').before(el);
         }
-        let comNc = 0;
+
+        let conformes = 0;   // inspeções sem nenhuma NC
+        let inspComNc = 0;   // inspeções com pelo menos uma NC
+        let totNc = 0;       // NCs por item (usado nos demais gráficos)
         const an = { concluida: 0, andamento: 0, pendente: 0 };
         const sev = { 'Crítica': 0, 'Alta': 0, 'Média': 0, 'Baixa': 0, 'Sem severidade': 0 };
         const gr = {};
+
         lista.forEach(r => {
-            const ncs = ncsDoRegistro(r, grupos);
-            if (ncs.length) comNc++;
+            // NCs do checklist + NCs fora do checklist (mesma lógica dos rankings)
+            const outras = outrasNcs(r);
+            const ncs = ncsTodas(r, grupos);
+
+            // Inspeção conforme = nenhuma NC; com NC = pelo menos uma
+            if (ncs.length) inspComNc++;
+            else conformes++;
+
+            let iFora = 0;
             ncs.forEach(n => {
+                totNc++;
                 an[statusAnalise(r, n.check)]++;
-                sev[normSev(r[n.check.sev])]++;
-                gr[n.grupo] = (gr[n.grupo] || 0) + 1;
+                if (n.fora) {
+                    const o = outras[iFora++] || {};
+                    sev[normSev(o.sev)]++;
+                    const nome = n.check.nome;                 // categoria da NC (ex.: Evidências (fotos))
+                    gr[nome] = (gr[nome] || 0) + 1;
+                } else {
+                    sev[normSev(r[n.check.sev])]++;
+                    const nome = ITENS[n.grupo].nome;
+                    gr[nome] = (gr[nome] || 0) + 1;
+                }
             });
         });
-        const total = lista.length;
-        const pct = total ? Math.round(comNc / total * 100) : 0;
-        const totNc = an.concluida + an.andamento + an.pendente;
-        const pctAn = totNc ? Math.round(an.concluida / totNc * 100) : 0;
+
+        const totInsp = conformes + inspComNc;
+        const pct = totInsp ? Math.round(conformes / totInsp * 100) : 0;
+        const totAn = an.concluida + an.andamento + an.pendente;
+        const pctAn = totAn ? Math.round(an.concluida / totAn * 100) : 0;
         const sevCor = { 'Crítica': 'var(--crit)', 'Alta': 'var(--alta)', 'Média': 'var(--media)', 'Baixa': 'var(--baixa)', 'Sem severidade': '#c9d3ee' };
+
         el.innerHTML = [
-            card('Conformidade', 'Registros com e sem NC',
+            card('Conformidade', 'Inspeções conformes x inspeções com NC',
                 donut([
-                    { rot: 'Conformes', v: total - comNc, cor: COR.ok },
-                    { rot: 'Com NC', v: comNc, cor: COR.nc }
-                ], pct + '%', 'com NC')),
+                    { rot: 'Conformes', v: conformes, cor: COR.ok },
+                    { rot: 'Com NC', v: inspComNc, cor: COR.nc }
+                ], pct + '%', 'conformes')),
             card('Andamento das análises', 'Causa raiz e solução por NC',
                 donut([
                     { rot: 'Concluídas', v: an.concluida, cor: COR.ok },
@@ -84,7 +107,7 @@
             card('NC por grupo de item', 'Onde as falhas se concentram',
                 Object.keys(gr).length
                     ? barrasH(Object.entries(gr).sort((a, b) => b[1] - a[1])
-                        .map(([g, v]) => ({ rot: ITENS[g].nome, v })))
+                        .map(([nome, v]) => ({ rot: nome, v })))
                     : '<div class="rk-vazio">Sem não conformidades.</div>')
         ].join('');
     };

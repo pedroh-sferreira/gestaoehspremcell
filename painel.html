@@ -35,6 +35,45 @@
     .eq-item.manual{border-color:#E0B84A;background:#FFF8E1}
     .eq-item.manual .eq-avatar{background:#C99A00}
     .eq-tag{display:inline-block;margin-top:2px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:#8a6a00;background:#FCEBB0;border-radius:4px;padding:1px 6px}
+    .rk li.rk-clic{cursor:pointer}
+    .rk li.rk-clic:hover{background:#F2F5FC}
+    .rk li.rk-clic:focus-visible{outline:2px solid #2E4CA6;outline-offset:-2px}
+    #modalRanking{width:min(1100px,94vw);max-height:90vh;padding:0;border:0;border-radius:12px;overflow:hidden}
+    #modalRanking::backdrop{background:rgba(20,30,60,.55)}
+    #modalRanking .modal-corpo{max-height:calc(90vh - 90px);overflow:auto}
+    .gv-barras{display:flex;gap:12px;height:285px;align-items:stretch;padding-top:6px}
+    .gv-col{flex:1;min-width:0;display:flex;flex-direction:column;border-radius:8px}
+    .gv-col.rk-clic{cursor:pointer}
+    .gv-col.rk-clic:hover .gv-bar{filter:brightness(1.1)}
+    .gv-col.rk-clic:focus-visible{outline:2px solid #2E4CA6;outline-offset:2px}
+    .gv-area{position:relative;flex:1}
+    .gv-trilho{position:absolute;left:50%;top:0;bottom:0;width:14px;transform:translateX(-50%);background:#e8edfa;border-radius:7px}
+    .gv-bar{position:absolute;left:50%;width:14px;transform:translateX(-50%);bottom:0;border-radius:7px}
+    .gv-bar b{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:700;color:#233D8C;white-space:nowrap}
+    .gv-rot{height:32px;margin-top:8px;font-size:11px;font-weight:600;line-height:1.2;text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+    .gv-linha{width:100%;height:auto;display:block}
+    .gv-linha g.rk-clic{cursor:pointer;outline:none}
+    .gv-linha g.rk-clic:hover circle.gv-ponto{r:5.5}
+
+    /* ===== Filtros no cabeçalho da tabela ===== */
+    .lista-acoes{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    #btnLimparTabela{font-size:12px;padding:4px 10px}
+    #tabelaWrapRegistros{max-height:75vh;overflow:auto}
+    #tabelaRegistros thead th{position:sticky;z-index:5;background:#F2F5FC}
+    #tabelaRegistros thead tr:first-child th{top:0}
+    #linhaFiltros th{top:var(--h-cab,38px);z-index:4;padding:4px 6px;font-weight:400;vertical-align:middle;box-shadow:inset 0 -1px 0 #ADB8D9}
+    .filtro-col{width:100%;min-width:90px;box-sizing:border-box;height:28px;margin:0;padding:0 22px 0 8px;
+        font-size:12px;line-height:1;font-family:inherit;color:inherit;
+        border:1px solid #ADB8D9;border-radius:6px;-webkit-appearance:none;appearance:none;
+        background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' fill='none' stroke='%236b77a3' stroke-width='1.5'/></svg>") no-repeat right 7px center}
+    .filtro-col:focus{outline:2px solid #2E4CA6;outline-offset:-1px}
+    .filtro-col.ativo{border-color:#2E4CA6;background-color:#EEF2FC}
+    #cbPainel{position:fixed;z-index:9999;display:none;max-height:240px;overflow-y:auto;box-sizing:border-box;
+        background:#fff;border:1px solid #ADB8D9;border-radius:8px;box-shadow:0 6px 18px rgba(20,30,60,.18);padding:4px;font-size:12px}
+    #cbPainel div{padding:5px 8px;border-radius:5px;cursor:pointer;line-height:1.2;overflow-wrap:anywhere}
+    #cbPainel div.sel,#cbPainel div:hover{background:#EEF2FC;color:#233D8C}
+    #cbPainel .cb-vazio{color:#6b77a3;cursor:default}
+    #cbPainel .cb-limpar{color:#6b77a3;font-style:italic}
     </style>
 </head>
 <body class="pg-painel">
@@ -72,12 +111,12 @@
             </div>
             <div class="filtros filtros-uma-linha">
                 <div class="campo">
-                    <label for="mes">Mês</label>
-                    <select name="mes" id="mes" data-multi></select>
+                    <label for="ano">Ano</label>
+                    <select name="ano" id="ano" data-multi></select>
                 </div>
                 <div class="campo">
-                    <label for="dia">Dia</label>
-                    <input type="date" id="dia" name="dia">
+                    <label for="mes">Mês</label>
+                    <select name="mes" id="mes" data-multi></select>
                 </div>
                 <div class="campo">
                 <label for="periodoIni">Período: de</label>
@@ -133,10 +172,13 @@
         <section class="bloco" aria-live="polite">
             <div class="lista-cab">
                 <h2><span class="tit-ico" aria-hidden="true">📋</span> Registros de EHS</h2>
-                <span class="contagem" id="contagem"></span>
+                <div class="lista-acoes">
+                    <button type="button" class="secundario" id="btnLimparTabela" hidden>Limpar filtros da tabela</button>
+                    <span class="contagem" id="contagem"></span>
+                </div>
             </div>
-            <div class="tabela-wrap">
-                <table>
+            <div class="tabela-wrap" id="tabelaWrapRegistros">
+                <table id="tabelaRegistros">
                     <thead>
                         <tr>
                             <th>Data</th>
@@ -146,12 +188,13 @@
                             <th>UF</th>
                             <th>Projeto</th>
                             <th>Site</th>
-                            <th>Login Huawei/Nokia</th>
+                            <th>Login</th>
                             <th>Realização EHS</th>
                             <th>Situação</th>
                             <th>Análises</th>
                             <th>Detalhes</th>
                         </tr>
+                        <tr id="linhaFiltros"></tr>
                     </thead>
                     <tbody id="listaRegistros"></tbody>
                 </table>
@@ -167,6 +210,28 @@
             <button type="button" id="btnFechar">Fechar</button>
         </div>
         <div class="modal-corpo" id="modalCorpo"></div>
+    </dialog>
+    <dialog id="modalRanking" aria-labelledby="rkModalTitulo">
+        <div class="modal-cab">
+            <div>
+                <h2 id="rkModalTitulo">Registros</h2>
+                <p id="rkModalSub"></p>
+            </div>
+            <button type="button" id="btnFecharRk">Fechar</button>
+        </div>
+        <div class="modal-corpo">
+            <div class="tabela-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th><th>Inspetor</th><th>Líder</th><th>Coordenador</th>
+                            <th>UF</th><th>Projeto</th><th>Site</th><th>NC neste item</th><th>Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rkModalLista"></tbody>
+                </table>
+            </div>
+        </div>
     </dialog>
 
     <script src="/script/multiselect.js"></script>
@@ -184,13 +249,14 @@
         e.preventDefault();
         try{
             localStorage.removeItem("ehs.sessao");sessionStorage.removeItem("ehs.sessao");
-            localStorage.removeItem("ehs.cache.equipes"); 
+            localStorage.removeItem("ehs.cache.equipes");
         }catch(x){}
         location.replace("index.html");
     });
     })();
     </script>
     <script src="/script/regioes-acesso.js"></script>
+    <script src="/script/perfil-acesso.js"></script>
     <script>
     const GAS_FUNCAO = 'listarEhs';
     const API_URL = 'https://script.google.com/macros/s/AKfycbzd4DTL994bGqXXTTVrRwghi_4cnX7BBlubQ5yS-YGnAfl_Mir6ZdSm4_w-dZutsa6s/exec';
@@ -261,7 +327,9 @@
         ['2026-10-05','Marcos Lima','Pedro Alves','Pedro Alves; Davi Rocha','Ana Souza','SE','PRJ-002','Manutenção','Aprovado','Sim','','','','','Sim','','','','','Sim','','','','','CC-11'],
         ['2026-10-07','Carla Dias','Rafael Costa','Rafael Costa; Tiago Lins; Hugo Reis','Bruno Reis','BA','PRJ-001','Instalação','Reprovado','Sim','','','','','Não','Jugular sem afivelar','Média','Corrigido na hora','Não','Não','Pneu dianteiro careca','Alta','Veículo retido','Sim','CC-10']
     ];
-    let registros = []; 
+    let registros = [];
+    let ultLista = [], ultGrupos = [];
+    let ultFiltrados = [];
 
     const $ = (id) => document.getElementById(id);
 
@@ -277,10 +345,13 @@
         });
         return out;
     }
-    let analises = {}; 
+    let analises = {};
 
+    // Chave da análise: NCs do checklist usam c.v; NCs fora do checklist usam c.idAn
+    // (mesmos ids que a página analise.html grava: problema_categoria, problema_ncs_json#2, #3...)
+    const chaveAn = (c) => c.idAn || c.v;
     const regIdDe = (reg) => (!vazio(reg.id) ? String(reg.id).trim() : 'L' + reg._linha);
-    const idNc = (reg, c) => regIdDe(reg) + '|' + c.v;
+    const idNc = (reg, c) => regIdDe(reg) + '|' + chaveAn(c);
 
     function analisesParaMapa(matriz) {
         const mapa = {};
@@ -296,7 +367,7 @@
         const rid = regIdDe(reg);
         return Object.values(analises).find(a =>
             String(a.registro_id ?? '').trim() === rid &&
-            String(a.nc_id ?? '').trim().endsWith('|' + c.v)) || null;
+            String(a.nc_id ?? '').trim().endsWith('|' + chaveAn(c))) || null;
     }
     function statusAnalise(reg, c) {
         const a = getAnalise(reg, c) || {};
@@ -343,10 +414,10 @@
             return null;
         }
     }
-    let equipesApi = [];      
-    let equipesTentou = false;    
+    let equipesApi = [];
+    let equipesTentou = false;
     let equipesPromessa = null;
-    let idxAberto = null;         
+    let idxAberto = null;
 
     try {
         const c = JSON.parse(localStorage.getItem(LS_EQ) || 'null');
@@ -414,7 +485,8 @@
         if (m) return m[3] + '-' + z2(m[2]) + '-' + z2(m[1]);
         return '';
     }
-    const mesDoRegistro = (v) => diaDoRegistro(v).slice(0, 7);      
+    const mesDoRegistro = (v) => diaDoRegistro(v).slice(0, 7);
+    const anoDoRegistro = (v) => diaDoRegistro(v).slice(0, 4);
     const rotuloMes = (m) => m ? m.slice(5) + '/' + m.slice(0, 4) : '';
     const rotuloDia = (d) => d ? d.slice(8) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '';
     const formatarData = (v) => { const d = diaDoRegistro(v); return d ? rotuloDia(d) : String(v ?? ''); };
@@ -423,18 +495,117 @@
     function checkEhNc(reg, c) {
         return VALORES_NC.includes(semAcento(reg[c.v])) || !vazio(reg[c.desc]);
     }
-    function ncsDoRegistro(reg, grupos) {
+
+    /* ===== Seleção do filtro "Itens verificados" =====
+       Valores possíveis (o filtro aceita várias seleções ao mesmo tempo):
+         "apr", "epi"...   -> todos os itens daquela categoria do checklist
+         "f:PROCESSO"      -> NCs fora do checklist da categoria Processo EHS
+       Sem nenhuma seleção = todos. */
+    function ncsDoRegistro(reg, sel) {
+        const todos = !sel || !sel.length;
         const lista = [];
-        (grupos && grupos.length ? grupos : Object.keys(ITENS)).forEach(g => {
-            if (!ITENS[g]) return; 
+        Object.keys(ITENS).forEach(g => {
+            const grupoInteiro = todos || sel.includes(g);
             ITENS[g].checks.forEach(c => {
+                if (!grupoInteiro && !sel.includes('c:' + c.v)) return;
                 if (checkEhNc(reg, c)) lista.push({ grupo: g, check: c });
             });
         });
         return lista;
     }
+
+    /* ===== NCs fora do checklist (colunas problema_*) ===== */
+    const ROT_CAT = { APR: 'APR', EPI: 'EPI/EPC', ALTURA: 'Trabalho em altura', EQUIPE: 'Equipe e habilitação',
+        AREA: 'Isolamento de área', VEICULO: 'Veículo', EVIDENCIA: 'Evidências (fotos)', PROCESSO: 'Processo EHS', OUTRO: 'Outros' };
+
+    // Converte o texto da coluna problema_categoria (ou do JSON) na chave de ROT_CAT
+    function chaveCat(c) {
+        const s = semAcento(c);
+        if (!s) return 'OUTRO';
+        return Object.keys(ROT_CAT).find(k => semAcento(k) === s || semAcento(ROT_CAT[k]) === s) || String(c).trim();
+    }
+    // Divide uma célula com várias NCs (quebra de linha ou "|")
+    function dividirCelula(v) {
+        return String(v ?? '').split(/\r?\n|\s*\|\|\s*|\s*\|\s*/).map(s => s.trim()).filter(Boolean);
+    }
+    // Padroniza uma NC vinda do JSON (aceita os nomes usados pelo registrarEhs e variações)
+    function normNc(n) {
+        n = n || {};
+        const pega = (...ks) => { for (const k of ks) if (!vazio(n[k])) return n[k]; return ''; };
+        const par = pega('par', 'paralisada', 'atividade_paralisada');
+        return {
+            item: pega('item'),
+            cat: chaveCat(pega('cat', 'categoria')),
+            sev: pega('sev', 'severidade', 'criticidade'),
+            desc: pega('desc', 'descricao', 'descricao_nc'),
+            acao: pega('acao', 'acao_corretiva'),
+            resolvido: pega('resolvido', 'resolveu'),
+            motivo: pega('motivo'),
+            par: par === true || ['sim', 'true'].includes(semAcento(par))
+        };
+    }
+    function outrasNcs(reg) {
+        if (reg._outras) return reg._outras;
+        // 1) lista completa gravada em problema_ncs_json (inclui NCs "x0", "p1", "p2" e "p3")
+        let lista = null;
+        const bruto = reg.problema_ncs_json;
+        if (Array.isArray(bruto)) lista = bruto;
+        else if (!vazio(bruto)) {
+            try {
+                const l = JSON.parse(bruto);
+                if (Array.isArray(l)) lista = l;
+            } catch (e) {
+                console.warn('problema_ncs_json inválido na linha ' + reg._linha + ':', e.message);
+            }
+        }
+        if (lista && lista.length) return (reg._outras = lista.map(normNc));
+        // 2) colunas simples problema_* (uma ou mais NCs separadas por quebra de linha ou "|")
+        if (vazio(reg.problema_descricao_nc)) return (reg._outras = []);
+        const descs = dividirCelula(reg.problema_descricao_nc);
+        const cats  = dividirCelula(reg.problema_categoria);
+        const sevs  = dividirCelula(reg.problema_severidade);
+        const acoes = dividirCelula(reg.problema_acao);
+        const pars  = dividirCelula(reg.problema_status_atividade);
+        return (reg._outras = descs.map((d, i) => normNc({
+            cat: cats[i] ?? cats[0],
+            sev: sevs[i] ?? sevs[0],
+            desc: d,
+            acao: acoes[i] ?? acoes[0],
+            par: pars[i] ?? pars[0]
+        })));
+    }
+    // NCs do checklist + NCs fora do checklist, no mesmo formato { grupo, check }.
+    // Toda NC fora do checklist conta como NC e tem o mesmo id de análise usado em analise.html.
+    // Com seleção no filtro "Itens verificados", só entram as NCs que combinam com ela.
+    function ncsTodas(reg, sel) {
+        const lista = ncsDoRegistro(reg, sel);
+        const todos = !sel || !sel.length;
+        const querForaTodas = todos || sel.includes('fora');
+        outrasNcs(reg).forEach((n, i) => {
+            const k = chaveCat(n.cat);
+            if (!querForaTodas && !sel.includes('f:' + k)) return;
+            lista.push({ grupo: 'fora', fora: true, check: {
+                v: 'fora_' + k, nome: ROT_CAT[k] || k,
+                idAn: i === 0 ? 'problema_categoria' : 'problema_ncs_json#' + (i + 1)
+            } });
+        });
+        return lista;
+    }
+    function totalNcs(reg, grupos) { return ncsTodas(reg, grupos).length; }
+
+    // Seleção atual do filtro "Itens verificados"
     function gruposSelecionados() {
         return MS.valores($('itens'));
+    }
+
+    /* ===== Sem atividade = NA (não entra nas estatísticas de conformidade) ===== */
+    // Resultado do dia "Sem atividade" (SEM_ATIVIDADE): não houve atividade, logo não houve EHS
+    function ehSemAtividade(reg) {
+        return semAcento(reg.resultado_dia).replace(/[\s_-]+/g, ' ') === 'sem atividade';
+    }
+    // NA = sem atividade e sem nenhuma NC lançada (se houver NC, ela continua aparecendo)
+    function ehNA(reg, grupos) {
+        return ehSemAtividade(reg) && totalNcs(reg, grupos) === 0;
     }
 
     function montarSelects() {
@@ -443,6 +614,10 @@
             $(id).innerHTML = '<option value="">Todos</option>' +
                 valores.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
         });
+
+        const anos = [...new Set(registros.map(r => anoDoRegistro(r.data_inspecao)).filter(Boolean))].sort().reverse();
+        $('ano').innerHTML = '<option value="">Todos</option>' +
+            anos.map(a => `<option value="${a}">${a}</option>`).join('');
 
         const meses = [...new Set(registros.map(r => mesDoRegistro(r.data_inspecao)).filter(Boolean))].sort().reverse();
         $('mes').innerHTML = '<option value="">Todos</option>' +
@@ -453,28 +628,35 @@
             '<option value="com">Somente com não conformidade</option>' +
             '<option value="sem">Somente sem não conformidade</option>';
 
-        $('itens').innerHTML = '<option value="">Todos</option>' +
-            Object.entries(ITENS).map(([g, o]) => `<option value="${g}">${esc(o.nome)}</option>`).join('');
+        // Itens verificados: apenas as categorias principais do checklist
+        // + "Fora do checklist › Processo EHS"
+        let op = '<option value="">Todos</option>';
+        Object.entries(ITENS).forEach(([g, o]) => {
+            op += `<option value="${g}">${esc(o.nome)}</option>`;
+        });
+        op += `<option value="f:PROCESSO">Fora do checklist › ${esc(ROT_CAT.PROCESSO)}</option>`;
+        $('itens').innerHTML = op;
     }
 
     function filtrar() {
         const grupos = gruposSelecionados();
+        const anos = MS.valores($('ano'));
         const meses = MS.valores($('mes'));
-        const dia = $('dia').value;
         const nc = MS.valores($('naoConformes'));
         const querCom = nc.includes('com'), querSem = nc.includes('sem');
         let ini = $('periodoIni').value, fim = $('periodoFim').value;
         if (ini && fim && ini > fim) [ini, fim] = [fim, ini];   // se inverteu as datas, corrige
+        if (ini && !fim) fim = ini;                              // só "de" preenchido = dia único
         return registros.filter(r => {
+            if (anos.length && !anos.includes(anoDoRegistro(r.data_inspecao))) return false;
             if (meses.length && !meses.includes(mesDoRegistro(r.data_inspecao))) return false;
-            if (dia && diaDoRegistro(r.data_inspecao) !== dia) return false;
             if (ini || fim) {
                 const d = diaDoRegistro(r.data_inspecao);
                 if (!d) return false;
                 if (ini && d < ini) return false;
                 if (fim && d > fim) return false;
             }
-            
+
             for (const [id, coluna] of Object.entries(FILTROS)) {
                 const escolhidos = MS.valores($(id));
                 if (escolhidos.length && !escolhidos.includes(String(r[coluna] ?? '').trim())) return false;
@@ -484,47 +666,125 @@
 
             if (grupos.length && qtd === 0) return false;
             if (querCom && !querSem && qtd === 0) return false;
-            if (querSem && !querCom && qtd > 0) return false;
+            // "Somente sem não conformidade" = conformes; dias sem atividade (NA) não são conformes
+            if (querSem && !querCom && (qtd > 0 || ehSemAtividade(r))) return false;
             return true;
         });
     }
-    function rankear(lista, grupos, chaveFn) {
+    function rankear(lista, grupos, chaveFn, limite = TOP) {
         const mapa = new Map();
         lista.forEach(r => {
-            ncsDoRegistro(r, grupos).forEach(n => {
+            ncsTodas(r, grupos).forEach(n => {
                 const c = chaveFn(r, n);
                 if (!c) return;
                 let e = mapa.get(c.k);
-                if (!e) { e = { label: c.label, sub: c.sub || '', nc: 0, regs: new Set() }; mapa.set(c.k, e); }
+                if (!e) { e = { k: c.k, label: c.label, sub: c.sub || '', nc: 0, regs: new Set() }; mapa.set(c.k, e); }
                 e.nc++;
                 e.regs.add(r._i);
             });
         });
         return [...mapa.values()]
             .sort((a, b) => b.nc - a.nc || b.regs.size - a.regs.size || a.label.localeCompare(b.label))
-            .slice(0, TOP);
+            .slice(0, limite);
     }
     const porColuna = (col) => (r) => {
         const v = String(r[col] ?? '').trim();
         return { k: v || '—', label: v || '(não informado)' };
     };
     const RANKINGS = [
-        { ico: '⚠️', titulo: 'Maiores problemas de NC',     sub: 'Itens com mais não conformidades',
-          fn: (r, n) => ({ k: n.grupo + '|' + n.check.v, label: n.check.nome, sub: ITENS[n.grupo].nome }) },
-        { ico: '👷', titulo: 'Equipes com mais problemas',  sub: 'Por líder', fn: porColuna('lider') },
-        { ico: '🧭', titulo: 'Coordenações com mais problemas', sub: 'Por coordenador', fn: porColuna('coordenador') },
-        { ico: '🗺️', titulo: 'Regiões com mais problemas',  sub: 'Região derivada da UF',
+        { clic: true, ico: '⚠️', titulo: 'Maiores problemas de NC',     sub: 'Itens com mais não conformidades',
+          fn: (r, n) => ({ k: n.grupo + '|' + n.check.v, label: n.check.nome,
+                           sub: n.fora ? 'Fora do checklist' : ITENS[n.grupo].nome }) },
+        { clic: true, ico: '👷', titulo: 'Equipes com mais problemas',  sub: 'Por líder', fn: porColuna('lider') },
+        { clic: true, grafico: 'barras', ico: '🧭', titulo: 'Coordenações com mais problemas', sub: 'Por coordenador', fn: porColuna('coordenador') },
+        { clic: true, grafico: 'barras', ico: '🗺️', titulo: 'Regiões com mais problemas',  sub: 'Região derivada da UF',
           fn: (r) => { const uf = String(r.uf ?? '').trim().toUpperCase(); const g = REGIOES[uf] || '(não informada)'; return { k: g, label: g }; } },
-        { ico: '📅', titulo: 'Meses com mais problemas',    sub: 'Pela data da inspeção',
+        { clic: true, grafico: 'linha', limite: 12, ico: '📅', titulo: 'Meses com mais problemas',    sub: 'Pela data da inspeção',
           fn: (r) => { const m = mesDoRegistro(r.data_inspecao); return { k: m || '—', label: m ? rotuloMes(m) : '(sem data)' }; } },
         { ico: '📍', titulo: 'Estados (UF) com mais problemas', sub: 'Por UF', fn: porColuna('uf') },
         { ico: '🛠️', titulo: 'Tipos de atividade com mais problemas', sub: 'Por tipo de EHS', fn: porColuna('tipo_ehs') }
     ];
-    function htmlRanking(rk, lista, grupos) {
+    function htmlRankingGrafico(rk, lista, grupos, ri) {
+        let itens;
+        if (rk.grafico === 'linha') {
+            itens = rankear(lista, grupos, rk.fn, Infinity)
+                .filter(e => e.k !== '—')
+                .sort((a, b) => a.k.localeCompare(b.k))
+                .slice(-(rk.limite || 12));
+        } else {
+            itens = rankear(lista, grupos, rk.fn, rk.limite || TOP);
+        }
+        const attr = (e, extra) => rk.clic
+            ? ` class="rk-clic ${extra || ''}" role="button" tabindex="0" title="Clique para ver os registros" data-rk="${ri}" data-k="${esc(e.k)}" data-label="${esc(e.label)}"`
+            : ` class="${extra || ''}"`;
+        const COR_TOP = 'var(--crit,#D63B2F)', COR_PADRAO = 'var(--azul,#2E4CA6)';
+        const max = Math.max(1, ...itens.map(e => e.nc));
+        let corpo;
+
+        if (!itens.length) {
+            corpo = '<div class="rk-vazio">Sem não conformidades nesta seleção.</div>';
+        } else if (rk.grafico === 'linha') {
+            const topo = itens.reduce((m, e) => e.nc > m.nc ? e : m, itens[0]).k;
+            const W = 480, H = 285, pl = 30, pr = 14, pt = 34, pb = 44;
+            const n = itens.length, iw = W - pl - pr, ih = H - pt - pb, base = pt + ih;
+            const x = (i) => pl + iw * (i + 0.5) / n;
+            const y = (v) => base - (v / max) * ih;
+            const passos = Math.min(max, 4);
+            let grade = '';
+            for (let i = 1; i <= passos; i++) {
+                const v = max * i / passos;
+                grade += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="#e3e8f6" stroke-width="1" stroke-dasharray="3 4"/>` +
+                         `<text x="${pl - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#8a94b8">${Math.round(v)}</text>`;
+            }
+            let tracado = `M${x(0)},${y(itens[0].nc)}`;
+            for (let i = 1; i < n; i++) {
+                const xm = (x(i - 1) + x(i)) / 2;
+                tracado += ` C${xm},${y(itens[i - 1].nc)} ${xm},${y(itens[i].nc)} ${x(i)},${y(itens[i].nc)}`;
+            }
+            const area = `${tracado} L${x(n - 1)},${base} L${x(0)},${base} Z`;
+            corpo = `<svg viewBox="0 0 ${W} ${H}" class="gv-linha" role="img" aria-label="${esc(rk.titulo)}">
+                <defs><linearGradient id="gvGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" style="stop-color:var(--azul,#2E4CA6);stop-opacity:.22"/>
+                    <stop offset="1" style="stop-color:var(--azul,#2E4CA6);stop-opacity:0"/>
+                </linearGradient></defs>
+                ${grade}
+                <line x1="${pl}" x2="${W - pr}" y1="${base}" y2="${base}" stroke="#cfd7ee" stroke-width="1"/>
+                ${n > 1 ? `<path d="${area}" fill="url(#gvGrad)"/>
+                <path d="${tracado}" fill="none" stroke="${COR_PADRAO}" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+                ${itens.map((e, i) => {
+                    const ehTopo = e.k === topo;
+                    const cor = ehTopo ? COR_TOP : COR_PADRAO;
+                    return `
+                <g${attr(e)}>
+                    <title>${esc(e.label)}: ${e.nc} NC em ${e.regs.size} ${e.regs.size === 1 ? 'registro' : 'registros'}</title>
+                    <circle cx="${x(i)}" cy="${y(e.nc)}" r="16" fill="transparent"/>
+                    ${ehTopo ? `<circle cx="${x(i)}" cy="${y(e.nc)}" r="10" fill="${cor}" fill-opacity=".15"/>` : ''}
+                    <circle class="gv-ponto" cx="${x(i)}" cy="${y(e.nc)}" r="4.5" fill="#fff" stroke="${cor}" stroke-width="2.2"/>
+                    <text x="${x(i)}" y="${y(e.nc) - 14}" text-anchor="middle" font-size="12" font-weight="700" fill="${ehTopo ? cor : '#233D8C'}">${e.nc}</text>
+                    ${n > 8 && i % 2 ? '' : `<text x="${x(i)}" y="${base + 22}" text-anchor="middle" font-size="11" font-weight="600" fill="#6b77a3">${esc(e.label)}</text>`}
+                </g>`;
+                }).join('')}
+            </svg>`;
+        } else {
+            corpo = `<div class="gv-barras">${itens.map((e, i) => `
+                <div${attr(e, 'gv-col')}>
+                    <div class="gv-area"><span class="gv-trilho"></span><span class="gv-bar" style="height:${Math.max(3, e.nc / max * 86)}%;background:${i === 0 ? COR_TOP : COR_PADRAO}"><b>${e.nc}</b></span></div>
+                    <span class="gv-rot" title="${esc(e.label)} · ${e.nc} NC · ${e.regs.size} ${e.regs.size === 1 ? 'registro' : 'registros'}">${esc(e.label)}</span>
+                </div>`).join('')}</div>`;
+        }
+        return `<section class="bloco rk-card"><div class="rk-cab"><span class="rk-ico" aria-hidden="true">${rk.ico}</span><div><h2>${esc(rk.titulo)}</h2><p class="rk-sub">${esc(rk.sub)}</p></div></div>${corpo}</section>`;
+    }
+    function htmlRanking(rk, lista, grupos, ri) {
+        if (rk.grafico) return htmlRankingGrafico(rk, lista, grupos, ri);
         const itens = rankear(lista, grupos, rk.fn);
         const max = itens.length ? itens[0].nc : 1;
+
+        const attrClic = (e) => rk.clic
+            ? ` class="rk-clic" role="button" tabindex="0" title="Clique para ver os registros" data-rk="${ri}" data-k="${esc(e.k)}" data-label="${esc(e.label)}"`
+            : '';
+
         const corpo = itens.length ? `<ol class="rk">${itens.map((e, i) => `
-            <li>
+            <li${attrClic(e)}>
                 <span class="rk-pos">${i + 1}</span>
                 <span class="rk-nome" title="${esc(e.label)}">${esc(e.label)}${e.sub ? `<small>${esc(e.sub)}</small>` : ''}</span>
                 <span class="rk-val">${e.nc} NC<small>${e.regs.size} ${e.regs.size === 1 ? 'registro' : 'registros'}</small></span>
@@ -534,71 +794,212 @@
         return `<section class="bloco rk-card"><div class="rk-cab"><span class="rk-ico" aria-hidden="true">${rk.ico}</span><div><h2>${esc(rk.titulo)}</h2><p class="rk-sub">${esc(rk.sub)}</p></div></div>${corpo}</section>`;
     }
     function renderDashboard(lista, grupos) {
-        const dia = $('dia').value;
+        ultLista = lista; ultGrupos = grupos;
+        const anos = MS.valores($('ano'));
         const meses = MS.valores($('mes'));
-        const pIni = $('periodoIni').value, pFim = $('periodoFim').value;
+        const pIni = $('periodoIni').value;
+        const pFim = $('periodoFim').value || pIni;   // só "de" preenchido = dia único
         let base, rot;
-        if (dia) {
-            base = lista.filter(r => diaDoRegistro(r.data_inspecao) === dia);
-            rot = dia === hojeISO() ? 'Hoje' : rotuloDia(dia);
-        } else if (pIni || pFim) {
+        if (pIni || pFim) {
             base = lista;
-            rot = pIni && pFim ? rotuloDia(pIni) + ' a ' + rotuloDia(pFim)
-                : pIni ? 'A partir de ' + rotuloDia(pIni)
+            rot = pIni && pIni === pFim ? (pIni === hojeISO() ? 'Hoje' : rotuloDia(pIni))
+                : pIni && pFim ? rotuloDia(pIni) + ' a ' + rotuloDia(pFim)
                 : 'Até ' + rotuloDia(pFim);
         } else if (meses.length) {
             base = lista;
             rot = meses.slice().sort().map(rotuloMes).join(', ');
+        } else if (anos.length) {
+            base = lista;
+            rot = anos.slice().sort().join(', ');
         } else {
             const h = hojeISO();
             base = lista.filter(r => diaDoRegistro(r.data_inspecao) === h);
             rot = 'Hoje';
         }
-        const comNc = base.filter(r => totalNcs(r, grupos) > 0).length;
+        // Sem atividade (NA) não houve EHS: fica fora de "verificados" e da conformidade
+        const baseEhs = base.filter(r => !ehNA(r, grupos));
+        const qtdNA = base.length - baseEhs.length;
+        const comNc = baseEhs.filter(r => totalNcs(r, grupos) > 0).length;
+        // Pendentes: qualquer NC (checklist ou fora do checklist) sem causa raiz e solução concluídas
         const pend = base.filter(r =>
-            ncsDoRegistro(r, grupos).some(n => statusAnalise(r, n.check) !== 'concluida')).length;
+            ncsTodas(r, grupos).some(n => statusAnalise(r, n.check) !== 'concluida')).length;
 
-        $('kpiAuditados').textContent = base.length;
-        $('kpiAuditadosSub').textContent = rot + ' · ' + comNc + ' com NC · ' + (base.length - comNc) + ' conformes';
+        $('kpiAuditados').textContent = baseEhs.length;
+        $('kpiAuditadosSub').textContent = rot + ' · ' + comNc + ' com NC · ' + (baseEhs.length - comNc) + ' conformes' +
+            (qtdNA ? ' · ' + qtdNA + ' sem atividade' : '');
         $('kpiPendentes').textContent = pend;
         $('kpiPendentesSub').textContent = rot + ' · NC sem causa raiz e solução concluídas';
 
-        $('rankings').innerHTML = RANKINGS.map(rk => htmlRanking(rk, lista, grupos)).join('');
-        if (window.renderGraficos) renderGraficos(lista, grupos);
+        $('rankings').innerHTML = RANKINGS.map((rk, i) => htmlRanking(rk, lista, grupos, i)).join('');
+        // O gráfico de Conformidade recebe só os registros com atividade (NA fica de fora)
+        if (window.renderGraficos) renderGraficos(lista.filter(r => !ehNA(r, grupos)), grupos);
     }
-    function celulaAnalises(r, ncs) {
-        if (!ncs.length) return '—';
+
+    /* ===== Resumo das análises de um registro (usado na célula e no filtro) ===== */
+    function resumoAnalises(r, ncs) {
         const total = ncs.length;
         const feitas = ncs.filter(n => statusAnalise(r, n.check) === 'concluida').length;
         const parciais = ncs.filter(n => statusAnalise(r, n.check) === 'andamento').length;
         const classe = feitas === total ? 'concluida' : (feitas || parciais ? 'andamento' : 'pendente');
         const rotulo = feitas === total ? 'Concluídas' : (feitas || parciais ? 'Em andamento' : 'Pendentes');
+        return { total, feitas, classe, rotulo };
+    }
+    function celulaAnalises(r, ncs) {
+        if (!ncs.length) return '—';
+        const { total, feitas, classe, rotulo } = resumoAnalises(r, ncs);
         return `<span class="an-resumo">
             <span class="selo ${classe}">${rotulo} · ${feitas}/${total}</span>
             <span class="an-prog" title="${feitas} de ${total} análises concluídas"><i style="width:${Math.round(feitas / total * 100)}%"></i></span>
         </span>`;
     }
-    function render() {
+
+    /* ===== Filtros no cabeçalho da tabela "Registros de EHS" ===== */
+    const OPCOES_SITUACAO = ['Conforme', 'NC', 'NA'];
+    const OPCOES_ANALISES = ['Concluídas', 'Em andamento', 'Pendentes'];
+    const COLS_TAB = [
+        { k: 'data',        get: (r) => formatarData(r.data_inspecao), ordem: 'data' },
+        { k: 'inspetor',    get: (r) => String(r.inspetor ?? '').trim() },
+        { k: 'lider',       get: (r) => String(r.lider ?? '').trim() },
+        { k: 'coordenador', get: (r) => String(r.coordenador ?? '').trim() },
+        { k: 'uf',          get: (r) => String(r.uf ?? '').trim() },
+        { k: 'projeto',     get: (r) => String(r.projeto ?? '').trim() },
+        { k: 'site',        get: (r) => String(r.site ?? '').trim() },
+        { k: 'login',       get: (r) => String(r.login_isdp || r.login || '').trim() },
+        { k: 'resultado',   get: (r) => String(r.resultado_dia ?? '').trim() },
+        { k: 'situacao',    get: (r, x) => x.na ? 'NA' : (x.qtd ? x.qtd + ' NC' : 'Conforme'), fixo: OPCOES_SITUACAO },
+        { k: 'analises',    get: (r, x) => x.ncs.length ? resumoAnalises(r, x.ncs).rotulo : '', fixo: OPCOES_ANALISES },
+        { k: 'detalhes',    sem: true }
+    ];
+    function contextoLinha(r, grupos) {
+        const ncs = ncsTodas(r, grupos);      // checklist + fora do checklist
+        const qtd = ncs.length;
+        return { ncs, qtd, na: ehSemAtividade(r) && qtd === 0 };
+    }
+
+    const opcoesCol = {};
+    function montarLinhaFiltros() {
+        $('linhaFiltros').innerHTML = COLS_TAB.map(c => c.sem ? '<th></th>' :
+            `<th><input type="text" class="filtro-col" data-k="${c.k}"
+                placeholder="Filtrar..." autocomplete="off" aria-label="Filtrar coluna ${esc(c.k)}"></th>`
+        ).join('');
+        const p = document.createElement('div');
+        p.id = 'cbPainel';
+        document.body.appendChild(p);
+        ajustarStickyFiltros();
+    }
+    // Guarda os valores existentes de cada coluna (após os filtros do topo)
+    function atualizarListasFiltro() {
         const grupos = gruposSelecionados();
-        const filtrados = filtrar();
-        renderDashboard(filtrados, grupos);
-        const lista = filtrados.slice().sort((a, b) =>
-            chaveData(b.data_inspecao) - chaveData(a.data_inspecao) ||
-            String(b.criado_em ?? '').localeCompare(String(a.criado_em ?? '')) ||
-            b._linha - a._linha
+        const ctxs = ultFiltrados.map(r => contextoLinha(r, grupos));
+        COLS_TAB.forEach(c => {
+            if (c.sem) return;
+            let valores;
+            if (c.fixo) {
+                valores = c.fixo;
+            } else {
+                const set = new Set();
+                ultFiltrados.forEach((r, i) => { const v = c.get(r, ctxs[i]); if (v) set.add(v); });
+                valores = [...set];
+                if (c.ordem === 'data') valores.sort((a, b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join('')));
+                else valores.sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+            }
+            opcoesCol[c.k] = valores;
+        });
+        if (cbInput) cbAbrir(cbInput);   // se a lista estiver aberta, atualiza
+    }
+    // Mantém a linha de filtros logo abaixo da linha de títulos (cabeçalho fixo)
+    function ajustarStickyFiltros() {
+        const tr = document.querySelector('#tabelaRegistros thead tr');
+        if (tr) $('tabelaRegistros').style.setProperty('--h-cab', tr.offsetHeight + 'px');
+    }
+
+    /* ===== Lista suspensa própria dos filtros (compacta e alinhada) ===== */
+    let cbInput = null, cbIdx = -1;
+    function cbFechar() {
+        $('cbPainel').style.display = 'none';
+        cbInput = null; cbIdx = -1;
+    }
+    function cbPosicionar() {
+        if (!cbInput) return;
+        const p = $('cbPainel'), r = cbInput.getBoundingClientRect();
+        p.style.left = r.left + 'px';
+        p.style.top = (r.bottom + 2) + 'px';
+        p.style.minWidth = r.width + 'px';
+        p.style.maxWidth = '320px';
+    }
+    function cbAbrir(inp) {
+        cbInput = inp;
+        const p = $('cbPainel');
+        const q = semAcento(inp.value);
+        const ops = (opcoesCol[inp.dataset.k] || []).filter(v => !q || semAcento(v).includes(q)).slice(0, 200);
+        let h = inp.value ? '<div class="cb-limpar" data-v="">Limpar filtro</div>' : '';
+        h += ops.length
+            ? ops.map(v => `<div data-v="${esc(v)}">${esc(v)}</div>`).join('')
+            : '<div class="cb-vazio">Sem valores</div>';
+        p.innerHTML = h;
+        cbIdx = -1;
+        p.style.display = 'block';
+        cbPosicionar();
+    }
+    function cbEscolher(v) {
+        if (!cbInput) return;
+        cbInput.value = v;
+        cbFechar();
+        renderTabela();
+    }
+    function cbMover(delta) {
+        const itens = [...$('cbPainel').querySelectorAll('[data-v]')];
+        if (!itens.length) return;
+        cbIdx = Math.max(0, Math.min(itens.length - 1, cbIdx + delta));
+        itens.forEach((el, i) => el.classList.toggle('sel', i === cbIdx));
+        itens[cbIdx].scrollIntoView({ block: 'nearest' });
+    }
+
+    function filtrosDaTabela() {
+        const out = [];
+        document.querySelectorAll('#linhaFiltros .filtro-col').forEach(inp => {
+            const v = semAcento(inp.value);
+            inp.classList.toggle('ativo', v !== '');
+            if (v) out.push({ k: inp.dataset.k, v });
+        });
+        return out;
+    }
+    function limparFiltrosTabela() {
+        document.querySelectorAll('#linhaFiltros .filtro-col').forEach(inp => { inp.value = ''; });
+        renderTabela();
+    }
+
+    function renderTabela() {
+        const grupos = gruposSelecionados();
+        const filtrosCol = filtrosDaTabela();
+        $('btnLimparTabela').hidden = !filtrosCol.length;
+
+        let lista = ultFiltrados.map(r => ({ r, x: contextoLinha(r, grupos) }));
+        if (filtrosCol.length) {
+            const defs = filtrosCol.map(f => ({ c: COLS_TAB.find(c => c.k === f.k), v: f.v }));
+            lista = lista.filter(({ r, x }) => defs.every(d => semAcento(d.c.get(r, x)).includes(d.v)));
+        }
+        lista.sort((a, b) =>
+            chaveData(b.r.data_inspecao) - chaveData(a.r.data_inspecao) ||
+            String(b.r.criado_em ?? '').localeCompare(String(a.r.criado_em ?? '')) ||
+            b.r._linha - a.r._linha
         );
+
         const tbody = $('listaRegistros');
-        $('contagem').textContent = lista.length + (lista.length === 1 ? ' registro' : ' registros');
-        if (!lista.length) {
+        const n = lista.length, total = ultFiltrados.length;
+        $('contagem').textContent = filtrosCol.length
+            ? n + ' de ' + total + (total === 1 ? ' registro' : ' registros')
+            : n + (n === 1 ? ' registro' : ' registros');
+        if (!n) {
             tbody.innerHTML = '<tr><td colspan="12" class="vazio">Nenhum registro encontrado com esses filtros.</td></tr>';
             return;
         }
-        tbody.innerHTML = lista.map(r => {
-            const ncs = ncsDoRegistro(r, grupos);
-            const qtdNc = totalNcs(r, grupos);
-            const situacao = qtdNc
-                ? `<span class="selo nc">${qtdNc} NC</span>`
-                : '<span class="selo ok">Conforme</span>';
+        tbody.innerHTML = lista.map(({ r, x }) => {
+            const situacao = x.na
+                ? '<span class="selo na" title="Sem atividade: não houve EHS e não entra na conformidade">NA</span>'
+                : x.qtd
+                    ? `<span class="selo nc">${x.qtd} NC</span>`
+                    : '<span class="selo ok">Conforme</span>';
             const botao = `<button type="button" class="btn-detalhes">Ver inspeção</button>`;
             return `<tr class="linha-clic" data-idx="${r._i}" tabindex="0" title="Clique para ver a inspeção completa">
                 <td>${esc(formatarData(r.data_inspecao))}</td>
@@ -611,10 +1012,19 @@
                 <td>${esc(r.login_isdp || r.login)}</td>
                 <td>${esc(r.resultado_dia)}</td>
                 <td>${situacao}</td>
-                <td>${celulaAnalises(r, ncs)}</td>
+                <td>${celulaAnalises(r, x.ncs)}</td>
                 <td>${botao}</td>
             </tr>`;
         }).join('');
+    }
+    function render() {
+        const grupos = gruposSelecionados();
+        const filtrados = filtrar();
+        ultFiltrados = filtrados;
+        renderDashboard(filtrados, grupos);
+        atualizarListasFiltro();
+        renderTabela();
+        ajustarStickyFiltros();
     }
     const DEBUG = new URLSearchParams(location.search).has('debug');
 
@@ -638,9 +1048,9 @@
         if (v instanceof Date && !isNaN(v))
             return z2(v.getDate()) + '/' + z2(v.getMonth() + 1) + '/' + v.getFullYear() + ' ' + z2(v.getHours()) + ':' + z2(v.getMinutes());
         const s = String(v).trim();
-        let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/); 
+        let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
         if (m) return `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
-        if (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/i.test(s)) {                             
+        if (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/i.test(s)) {
             const d = new Date(s);
             if (!isNaN(d)) return fmtDH(d);
         }
@@ -652,8 +1062,6 @@
     const ROT_RESULTADO = { REALIZADO: 'EHS realizado', SEM_ATIVIDADE: 'Sem atividade', SEM_EHS: 'Atividade sem EHS' };
     const ROT_TIPO = { TORRE: 'Torre', SOLO: 'Solo', TORREESOLO: 'Torre e Solo' };
     const ROT_SEV = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' };
-    const ROT_CAT = { APR: 'APR', EPI: 'EPI/EPC', ALTURA: 'Trabalho em altura', EQUIPE: 'Equipe e habilitação',
-        AREA: 'Isolamento de área', VEICULO: 'Veículo', EVIDENCIA: 'Evidências (fotos)', PROCESSO: 'Processo EHS', OUTRO: 'Outros' };
     const rotSimNao = (v) => { const s = semAcento(v); return s === 'sim' ? 'Sim' : (s === 'nao' ? 'Não' : (v || '')); };
 
     const campo = (rot, val) =>
@@ -685,7 +1093,7 @@
             const n = String(nome ?? '').trim();
             const k = semAcento(n);
             if (!n) return;
-            if (vistos.has(k)) {                      
+            if (vistos.has(k)) {
                 const p = vistos.get(k);
                 if (!p.login && login) p.login = String(login).trim();
                 return;
@@ -726,7 +1134,7 @@
             Object.keys(reg).forEach(k => {
                 const kn = semAcento(k);
                 if (kn === 'equipe') return;
-                if (kn === 'integrantesnoehs') {  
+                if (kn === 'integrantesnoehs') {
                     const v = String(reg[k] ?? '').trim();
                     if (v && !/^\d+$/.test(v)) pessoasDeValor(v).forEach(p => add(p.nome, 'Instalador', p.login));
                     return;
@@ -763,19 +1171,6 @@
             </ul>` : '';
         return cadastro + manual + '</section>';
     }
-    function outrasNcs(reg) {
-        if (vazio(reg.problema_descricao_nc)) return [];
-        try {
-            const l = JSON.parse(reg.problema_ncs_json);
-            if (Array.isArray(l) && l.length) return l;
-        } catch (e) {}
-        return [{ cat: 'OUTRO', sev: reg.problema_severidade, desc: reg.problema_descricao_nc, acao: reg.problema_acao,
-                  resolvido: '', motivo: '', par: semAcento(reg.problema_status_atividade) === 'sim' }];
-    }
-    function totalNcs(reg, grupos) {
-        const fora = (grupos && grupos.length) ? 0 : outrasNcs(reg).length;
-        return ncsDoRegistro(reg, grupos).length + fora;
-    }
     function abrirDetalhes(idx) {
         const reg = registros[idx];
         if (!reg) return;
@@ -801,8 +1196,7 @@
             ${campo('Inspetor', reg.inspetor)}
             ${campo('Líder', reg.lider)}
             ${campo('Equipe', reg.equipe && !pareceLista(String(reg.equipe)) ? reg.equipe : '')}
-            ${campo('Login do líder', reg.login)}
-            ${campo('Login Huawei/Nokia', reg.login)}
+            ${campo('Login do líder', reg.login_isdp || reg.login)}
             ${campo('Coordenador', reg.coordenador)}
             ${campo('UF', reg.uf)}
             ${campo('Região', reg.centro_custo)}
@@ -818,7 +1212,7 @@
         const eq = integrantesDoRegistro(reg, eqManual);
         let equipeHtml = htmlEquipe(eq);
         if (DEBUG) {
-            const cols = Object.keys(reg).filter(k => /equipe|integrante|instalador|membro|lider|login|obs/i.test(k));
+            const cols = Object.keys(reg).filter(k => /equipe|integrante|instalador|membro|lider|login|obs|problema/i.test(k));
             const eqA = equipeDaApi(reg);
             equipeHtml += `<section class="insp-sec"><h3>DEBUG — equipe</h3><dl class="insp-grid" style="grid-template-columns:1fr">
                 <div class="insp-campo"><dt>Equipes carregadas da API</dt><dd style="font-weight:400">${equipesApi.length}</dd></div>
@@ -837,8 +1231,16 @@
             }).join('')}</ul>`;
         }).join('');
         const checklist = `<section class="insp-sec"><h3>Checklist</h3>${ck || '<p><em>Sem itens de checklist neste registro.</em></p>'}</section>`;
+
+        // NCs fora do checklist: cada uma tem o mesmo id de análise usado em analise.html
+        const outras = outrasNcs(reg);
+        const outrasChecks = outras.map((n, i) => ({
+            v: 'fora_' + chaveCat(n.cat),
+            idAn: i === 0 ? 'problema_categoria' : 'problema_ncs_json#' + (i + 1)
+        }));
         const cont = { concluida: 0, andamento: 0, pendente: 0 };
         ncs.forEach(n => cont[statusAnalise(reg, n.check)]++);
+        outrasChecks.forEach(c => cont[statusAnalise(reg, c)]++);
         const porGrupo = {};
         ncs.forEach(n => (porGrupo[n.grupo] ??= []).push(n.check));
         const ncHtml = Object.entries(porGrupo).map(([g, checks]) => `
@@ -859,23 +1261,29 @@
                     ${blocoAnalise(reg, c)}
                 </div>`;
             }).join('')}`).join('');
-        const outras = outrasNcs(reg);
-        const outrasHtml = outras.map(n => `<div class="nc-item">
-            <div class="nc-item-cab"><h4>${esc(ROT_CAT[n.cat] || n.cat || 'Outros')}</h4>${n.item === 'p3' ? '<span class="selo nc">Automática</span>' : ''}</div>
-            <dl>
-                <dt>Descrição da NC</dt><dd>${esc(n.desc || '—')}</dd>
-                <dt>Severidade</dt><dd>${esc(ROT_SEV[n.sev] || n.sev || '—')}</dd>
-                <dt>Ação corretiva</dt><dd>${esc(n.acao || '—')}</dd>
-                <dt>Resolveu o problema?</dt><dd>${esc(rotSimNao(n.resolvido) || '—')}</dd>
-                ${!vazio(n.motivo) ? `<dt>Por que não resolveu</dt><dd>${esc(n.motivo)}</dd>` : ''}
-                <dt>Atividade paralisada</dt><dd>${n.par ? 'Sim' : 'Não'}</dd>
-            </dl></div>`).join('');
+        const outrasHtml = outras.map((n, i) => {
+            const k = chaveCat(n.cat), c = outrasChecks[i], st = statusAnalise(reg, c);
+            const par = typeof n.par === 'boolean' ? n.par : semAcento(n.par) === 'sim';
+            return `<div class="nc-item st-${st}">
+                <div class="nc-item-cab"><h4>${esc(ROT_CAT[k] || k || 'Outros')}</h4>${n.item === 'p3' ? '<span class="selo nc">Automática</span>' : ''}<span class="selo ${st}">${ROTULO_STATUS[st]}</span></div>
+                <dl>
+                    <dt>Descrição da NC</dt><dd>${esc(n.desc || '—')}</dd>
+                    <dt>Severidade</dt><dd>${esc(ROT_SEV[String(n.sev ?? '').toUpperCase()] || n.sev || '—')}</dd>
+                    <dt>Ação corretiva</dt><dd>${esc(n.acao || '—')}</dd>
+                    <dt>Resolveu o problema?</dt><dd>${esc(rotSimNao(n.resolvido) || '—')}</dd>
+                    ${!vazio(n.motivo) ? `<dt>Por que não resolveu</dt><dd>${esc(n.motivo)}</dd>` : ''}
+                    <dt>Atividade paralisada</dt><dd>${par ? 'Sim' : 'Não'}</dd>
+                </dl>
+                ${blocoAnalise(reg, c)}
+            </div>`;
+        }).join('');
 
         const total = ncs.length + outras.length;
+        const semAtiv = ehSemAtividade(reg) && total === 0;
         const secNc = `<section class="insp-sec"><h3>Não conformidades</h3>
             <div class="modal-resumo">
-                <span class="selo ${total ? 'nc' : 'ok'}">${total ? total + ' NC' : 'Sem NC'}</span>
-                ${ncs.length ? `<span class="selo concluida">${cont.concluida} concluída(s)</span>
+                <span class="selo ${total ? 'nc' : (semAtiv ? 'na' : 'ok')}">${total ? total + ' NC' : (semAtiv ? 'NA · Sem atividade' : 'Sem NC')}</span>
+                ${total ? `<span class="selo concluida">${cont.concluida} concluída(s)</span>
                 <span class="selo andamento">${cont.andamento} em andamento</span>
                 <span class="selo pendente">${cont.pendente} pendente(s)</span>` : ''}
             </div>
@@ -889,18 +1297,108 @@
         if (!$('modalDetalhes').open) $('modalDetalhes').showModal();
         else corpo.scrollTop = rolagem;
     }
+    function abrirRanking(ri, k, label) {
+        const rk = RANKINGS[ri];
+        if (!rk) return;
+        const linhas = [];
+        ultLista.forEach(r => {
+            const qtd = ncsTodas(r, ultGrupos).filter(n => {
+                const c = rk.fn(r, n);
+                return c && c.k === k;
+            }).length;
+            if (qtd) linhas.push({ r, qtd });
+        });
+        linhas.sort((a, b) =>
+            chaveData(b.r.data_inspecao) - chaveData(a.r.data_inspecao) || b.r._linha - a.r._linha);
+
+        const totalNc = linhas.reduce((s, x) => s + x.qtd, 0);
+        $('rkModalTitulo').textContent = rk.titulo.replace(/ com mais problemas| de NC/g, '') + ': ' + label;
+        $('rkModalSub').textContent = linhas.length + (linhas.length === 1 ? ' registro' : ' registros') +
+            ' · ' + totalNc + ' NC';
+
+        $('rkModalLista').innerHTML = linhas.map(({ r, qtd }) => `
+            <tr class="linha-clic" data-idx="${r._i}" tabindex="0" title="Clique para ver a inspeção completa">
+                <td>${esc(formatarData(r.data_inspecao))}</td>
+                <td>${esc(r.inspetor)}</td>
+                <td>${esc(r.lider)}</td>
+                <td>${esc(r.coordenador)}</td>
+                <td>${esc(r.uf)}</td>
+                <td>${esc(r.projeto)}</td>
+                <td>${esc(r.site)}</td>
+                <td><span class="selo nc">${qtd} NC</span></td>
+                <td>${totalNcs(r, ultGrupos) ? `<span class="selo nc">${totalNcs(r, ultGrupos)} NC no total</span>` : '<span class="selo ok">Conforme</span>'}</td>
+            </tr>`).join('') ||
+            '<tr><td colspan="9" class="vazio">Nenhum registro.</td></tr>';
+
+        $('modalRanking').showModal();
+    }
+    function aoClicarRanking(e) {
+        const el = e.target.closest('.rk-clic');
+        if (!el) return;
+        abrirRanking(Number(el.dataset.rk), el.dataset.k, el.dataset.label);
+    }
+    const areaPainel = document.querySelector('main');
+    areaPainel.addEventListener('click', aoClicarRanking);
+    areaPainel.addEventListener('keydown', (e) => {
+        if (e.target.closest('#linhaFiltros')) return;   // não interferir na digitação dos filtros da tabela
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aoClicarRanking(e); }
+    });
+
+    function aoClicarLinhaRk(e) {
+        const tr = e.target.closest('tr[data-idx]');
+        if (tr) abrirDetalhes(Number(tr.dataset.idx));
+    }
+    $('rkModalLista').addEventListener('click', aoClicarLinhaRk);
+    $('rkModalLista').addEventListener('keydown', (e) => { if (e.key === 'Enter') aoClicarLinhaRk(e); });
+    $('btnFecharRk').addEventListener('click', () => $('modalRanking').close());
+    $('modalRanking').addEventListener('click', (e) => {
+        if (e.target === $('modalRanking')) $('modalRanking').close();
+    });
     $('btnLimpar').addEventListener('click', () => {
-        ['mes', ...Object.keys(FILTROS), 'naoConformes', 'itens'].forEach(id => MS.limpar($(id)));
-        $('dia').value = '';
+        ['ano', 'mes', ...Object.keys(FILTROS), 'naoConformes', 'itens'].forEach(id => MS.limpar($(id)));
         $('periodoIni').value = '';
         $('periodoFim').value = '';
         render();
     });
     document.querySelectorAll('.filtros select').forEach(el =>
         el.addEventListener('change', render));
-    ['change', 'input'].forEach(ev => $('dia').addEventListener(ev, render));
     ['periodoIni', 'periodoFim'].forEach(id =>
     ['change', 'input'].forEach(ev => $(id).addEventListener(ev, render)));
+
+    /* Filtros por coluna da tabela (digitar ou escolher na lista) */
+    montarLinhaFiltros();
+    let tmrFiltroTab = null;
+    const linhaFil = $('linhaFiltros');
+    linhaFil.addEventListener('focusin', (e) => { if (e.target.classList.contains('filtro-col')) cbAbrir(e.target); });
+    linhaFil.addEventListener('click',   (e) => { if (e.target.classList.contains('filtro-col')) cbAbrir(e.target); });
+    linhaFil.addEventListener('focusout', cbFechar);
+    linhaFil.addEventListener('input', (e) => {
+        if (e.target.classList.contains('filtro-col')) cbAbrir(e.target);
+        clearTimeout(tmrFiltroTab);
+        tmrFiltroTab = setTimeout(renderTabela, 150);
+    });
+    linhaFil.addEventListener('keydown', (e) => {
+        if (!cbInput) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); cbMover(1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); cbMover(-1); }
+        else if (e.key === 'Escape') { cbFechar(); }
+        else if (e.key === 'Enter') {
+            const sel = $('cbPainel').querySelectorAll('[data-v]')[cbIdx];
+            if (sel) { e.preventDefault(); cbEscolher(sel.dataset.v); } else cbFechar();
+        }
+    });
+    // mousedown com preventDefault: o campo não perde o foco ao clicar na lista
+    $('cbPainel').addEventListener('mousedown', (e) => e.preventDefault());
+    $('cbPainel').addEventListener('click', (e) => {
+        const it = e.target.closest('[data-v]');
+        if (it) cbEscolher(it.dataset.v);
+    });
+    window.addEventListener('scroll', (e) => {
+        if (cbInput && !$('cbPainel').contains(e.target)) cbPosicionar();
+    }, true);
+    window.addEventListener('resize', () => { cbPosicionar(); ajustarStickyFiltros(); });
+    $('btnLimparTabela').addEventListener('click', limparFiltrosTabela);
+
     $('listaRegistros').addEventListener('click', (e) => {
         const tr = e.target.closest('tr[data-idx]');
         if (tr) abrirDetalhes(Number(tr.dataset.idx));
@@ -920,18 +1418,18 @@
         if (c) analises = analisesParaMapa(c);
     } catch (e) {}
 
-    let pronto = false; 
+    let pronto = false;
     carregarAnalises().then(an => {
         if (!an) return;
         analises = an;
         if (!Object.keys(an).length && $('avisoAnalises').hidden)
             avisar('Nenhuma análise encontrada no banco de dados.');
-        if (pronto) render();  
+        if (pronto) render();
     });
     carregarEquipesApi();
     carregarMatriz()
         .then(m => {
-            registros = matrizParaObjetos(m);
+            registros = ACESSO.filtrar(matrizParaObjetos(m));
             registros.forEach((r, i) => r._i = i);
             montarSelects();
             pronto = true;

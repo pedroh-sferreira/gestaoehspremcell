@@ -7,6 +7,28 @@
     <link rel="icon" type="image/png" href="/img/logo_branco.png (2).png"/>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/dasboard.css">
+    <style>
+    /* ===== Tabela com cabeçalho fixo + filtros por coluna (mesmo padrão do painel) ===== */
+    .lista-acoes{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    #btnLimparTabela{font-size:12px;padding:4px 10px}
+    #tabelaWrapNcs{max-height:75vh;overflow:auto}
+    #tabelaNcs thead th{position:sticky;z-index:5;background:#F2F5FC}
+    #tabelaNcs thead tr:first-child th{top:0}
+    #linhaFiltros th{top:var(--h-cab,38px);z-index:4;padding:4px 6px;font-weight:400;vertical-align:middle;box-shadow:inset 0 -1px 0 #ADB8D9}
+    .filtro-col{width:100%;min-width:90px;box-sizing:border-box;height:28px;margin:0;padding:0 22px 0 8px;
+        font-size:12px;line-height:1;font-family:inherit;color:inherit;
+        border:1px solid #ADB8D9;border-radius:6px;-webkit-appearance:none;appearance:none;
+        background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' fill='none' stroke='%236b77a3' stroke-width='1.5'/></svg>") no-repeat right 7px center}
+    .filtro-col.sem-seta{background-image:none;padding-right:8px}
+    .filtro-col:focus{outline:2px solid #2E4CA6;outline-offset:-1px}
+    .filtro-col.ativo{border-color:#2E4CA6;background-color:#EEF2FC}
+    #cbPainel{position:fixed;z-index:9999;display:none;max-height:240px;overflow-y:auto;box-sizing:border-box;
+        background:#fff;border:1px solid #ADB8D9;border-radius:8px;box-shadow:0 6px 18px rgba(20,30,60,.18);padding:4px;font-size:12px}
+    #cbPainel div{padding:5px 8px;border-radius:5px;cursor:pointer;line-height:1.2;overflow-wrap:anywhere}
+    #cbPainel div.sel,#cbPainel div:hover{background:#EEF2FC;color:#233D8C}
+    #cbPainel .cb-vazio{color:#6b77a3;cursor:default}
+    #cbPainel .cb-limpar{color:#6b77a3;font-style:italic}
+    </style>
 </head>
 <body>
     <header class="topo">
@@ -30,9 +52,28 @@
     <main>
         <h1>Análise de origem do problema</h1>
         <p class="intro">Todas as não conformidades registradas aparecem abaixo. Clique em uma delas para abrir a análise dos 5 porquês.</p>
-        <section class="bloco filtros-bloco">
-            <h2>Filtros</h2>
-            <div class="filtros">
+        <section class="bloco compacto filtros-bloco">
+            <div class="filtros-cab">
+                <h2><span class="tit-ico" aria-hidden="true">🔎</span> Filtros</h2>
+                <button type="button" class="secundario" id="btnLimpar">Limpar filtros</button>
+            </div>
+            <div class="filtros filtros-uma-linha">
+                <div class="campo">
+                    <label for="mes">Mês</label>
+                    <select name="mes" id="mes" data-multi></select>
+                </div>
+                <div class="campo">
+                    <label for="periodoIni">Período: de</label>
+                    <input type="date" id="periodoIni" name="periodoIni" title="Informando só a data inicial, filtra exatamente aquele dia">
+                </div>
+                <div class="campo">
+                    <label for="periodoFim">Período: até</label>
+                    <input type="date" id="periodoFim" name="periodoFim">
+                </div>
+                <div class="campo">
+                    <label for="centro_custo">Região</label>
+                    <select name="centro_custo" id="centro_custo" data-multi></select>
+                </div>
                 <div class="campo">
                     <label for="fStatus">Situação da análise</label>
                     <select id="fStatus" data-multi>
@@ -56,10 +97,13 @@
         <section class="bloco lista" aria-live="polite">
             <div class="lista-cab">
                 <h2>Não conformidades registradas</h2>
-                <span class="contagem" id="contagem"></span>
+                <div class="lista-acoes">
+                    <button type="button" class="secundario" id="btnLimparTabela" hidden>Limpar filtros da tabela</button>
+                    <span class="contagem" id="contagem"></span>
+                </div>
             </div>
-            <div class="tabela-wrap">
-                <table>
+            <div class="tabela-wrap" id="tabelaWrapNcs">
+                <table id="tabelaNcs">
                     <thead>
                         <tr>
                             <th>Data</th>
@@ -72,6 +116,7 @@
                             <th>Análise</th>
                             <th>5 porquês</th>
                         </tr>
+                        <tr id="linhaFiltros"></tr>
                     </thead>
                     <tbody id="listaNcs"></tbody>
                 </table>
@@ -141,10 +186,11 @@
     })();
     </script>
     <script src="/script/regioes-acesso.js"></script>
+    <script src="/script/perfil-acesso.js"></script>
     <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbwKRYdotWICN38z9EVbhyE4rztl5yMmlDd3li3pl8l3ae-pfRjE8ZoMBkokkted7jTm/exec';
 
-    const LINHA_INICIAL_DADOS = 2;   
+    const LINHA_INICIAL_DADOS = 2;
 
     const VALORES_NC = ['nao', 'nc', 'nao conforme', 'nao conformes', 'reprovado', 'false'];
 
@@ -189,42 +235,51 @@
         veiculo: { nome: 'Veículo', checks: [
             padrao('Pneus em boas condições', 'veiculo', 'pneu'),
             padrao('Condições gerais do veículo satisfatórias', 'veiculo', 'condicoes_gerais'),
-            padrao('Documentos e itens de segurança', 'veiculo', 'documento')              
+            padrao('Documentos e itens de segurança', 'veiculo', 'documento')
         ]},
         altura: { nome: 'Trabalho em altura', checks: [
-            padrao('Pontos de ancoragem verificados', 'trabalho', 'ancoragem')             
+            padrao('Pontos de ancoragem verificados', 'trabalho', 'ancoragem')
         ]},
         evidencia: { nome: 'Evidências (fotos)', checks: [
-            padrao('Fotos do kit aberto e fechado', 'evidencia', 'kit_aberto')             
+            padrao('Fotos do kit aberto e fechado', 'evidencia', 'kit_aberto')
         ]},
         processo: { nome: 'Processo EHS', checks: [] },
         outros: { nome: 'Outros problemas', checks: [] }
     };
 
     const DADOS_EXEMPLO = [
-        ['id','data_inspecao','lider','projeto','uf','apr_validade','apr_descricao_nc_validade','apr_severidade_validade','apr_acao_validade','apr_status_atividade_validade','veiculo_condicoes_gerais','veiculo_descricao_nc_condicoes_gerais','veiculo_severidade_condicoes_gerais','veiculo_acao_condicoes_gerais','veiculo_acao_condicoes_gerais_resolveu','veiculo_acao_condicoes_gerais_motivo','veiculo_status_atividade_condicoes_gerais'],
-        ['ID','Data','Líder','Projeto','UF','APR','Desc','Sev','Ação','Paralisada','Condições','Desc','Sev','Ação','Resolveu','Motivo','Paralisada'],
-        ['E-001','2026-10-02','João Silva','56A0VD0','BA','NC','APR vencida','Alta','Equipe orientada a renovar','Sim','Conforme','','','','','',''],
-        ['E-002','2026-10-07','Rafael Costa','56A0T27','BA','Conforme','','','','','NC','Condições gerais do veículo insatisfatórias','Média','Veículo retido para revisão','Não','Oficina só tem vaga na próxima semana','Não']
+        ['id','data_inspecao','lider','projeto','uf','centro_custo','apr_validade','apr_descricao_nc_validade','apr_severidade_validade','apr_acao_validade','apr_status_atividade_validade','veiculo_condicoes_gerais','veiculo_descricao_nc_condicoes_gerais','veiculo_severidade_condicoes_gerais','veiculo_acao_condicoes_gerais','veiculo_acao_condicoes_gerais_resolveu','veiculo_acao_condicoes_gerais_motivo','veiculo_status_atividade_condicoes_gerais'],
+        ['ID','Data','Líder','Projeto','UF','Região','APR','Desc','Sev','Ação','Paralisada','Condições','Desc','Sev','Ação','Resolveu','Motivo','Paralisada'],
+        ['E-001','2026-10-02','João Silva','56A0VD0','BA','CC-10','NC','APR vencida','Alta','Equipe orientada a renovar','Sim','Conforme','','','','','',''],
+        ['E-002','2026-10-07','Rafael Costa','56A0T27','BA','CC-10','Conforme','','','','','NC','Condições gerais do veículo insatisfatórias','Média','Veículo retido para revisão','Não','Oficina só tem vaga na próxima semana','Não']
     ];
 
     const $ = (id) => document.getElementById(id);
     const semAcento = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const vazio = (s) => String(s ?? '').trim() === '';
+    const z2 = (n) => String(n).padStart(2, '0');
 
-    function formatarData(v) {
-        const m = String(v ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-        return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v ?? '');
-    }
-
-    function dataOrdenavel(v) {   
-        const s = String(v ?? '');
+    /* ===== Datas (mesmas funções do painel) ===== */
+    function diaDoRegistro(v) {
+        if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + z2(v.getMonth() + 1) + '-' + z2(v.getDate());
+        const s = String(v ?? '').trim();
+        if (!s) return '';
+        if (/^\d{4}-\d{2}-\d{2}T.*(Z|[+-]\d{2}:?\d{2})$/i.test(s)) {
+            const d = new Date(s);
+            if (!isNaN(d)) return d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate());
+        }
         let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (m) return m[0];
-        m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-        return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+        if (m) return m[1] + '-' + m[2] + '-' + m[3];
+        m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m) return m[3] + '-' + z2(m[2]) + '-' + z2(m[1]);
+        return '';
     }
+    const mesDoRegistro = (v) => diaDoRegistro(v).slice(0, 7);
+    const rotuloMes = (m) => m ? m.slice(5) + '/' + m.slice(0, 4) : '';
+    const rotuloDia = (d) => d ? d.slice(8) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) : '';
+    const formatarData = (v) => { const d = diaDoRegistro(v); return d ? rotuloDia(d) : String(v ?? ''); };
+    const chaveData = (v) => Number(diaDoRegistro(v).replace(/-/g, '')) || 0;
 
     function matrizParaObjetos(matriz) {
         const cab = (matriz[0] || []).map(c => String(c).trim());
@@ -244,9 +299,11 @@
     }
 
     const modoExemplo = !API_URL || API_URL.startsWith('COLE_AQUI');
+    let registros = [];
     let ncs = [];
-    let analises = {};   
-    let ncAberta = null;    
+    let ultFiltradas = [];
+    let analises = {};
+    let ncAberta = null;
 
     async function apiGet(acao) {
         const url = API_URL + (acao ? '?acao=' + encodeURIComponent(acao) : '');
@@ -296,9 +353,9 @@
         }];
     }
 
-    function construirNcs(registros) {
+    function construirNcs(regs) {
         const lista = [];
-        registros.forEach(reg => {
+        regs.forEach(reg => {
             const regId = !vazio(reg.id) ? reg.id : 'L' + reg._linha;
             Object.entries(ITENS).forEach(([g, grupo]) => {
                 grupo.checks.forEach(c => {
@@ -313,7 +370,6 @@
                 lista.push({ id: regId + '|' + p.suf, regId, reg, grupo: p.grupo, nome: p.nome, rotuloGrupo: p.rotuloGrupo, dados: p.dados });
             });
         });
-        lista.sort((a, b) => dataOrdenavel(b.reg.data_inspecao).localeCompare(dataOrdenavel(a.reg.data_inspecao)));
         return lista;
     }
     const rotuloGrupo = (nc) => nc.rotuloGrupo || ITENS[nc.grupo].nome;
@@ -333,41 +389,199 @@
         return (!vazio(a.raiz) && !vazio(a.solucao)) ? 'concluida' : 'andamento';
     }
     const ROTULO = { pendente: 'Pendente', andamento: 'Em andamento', concluida: 'Concluída' };
-    function montarFiltroGrupo() {
+
+    /* ===== Filtros do topo (mesmo padrão do painel) ===== */
+    // Região = coluna "centro_custo" da planilha, igual ao filtro "Região" do painel
+    const regiaoDe = (reg) => String(reg.centro_custo ?? '').trim();
+
+    function montarSelects() {
         $('fGrupo').innerHTML = '<option value="">Todos</option>' +
             Object.entries(ITENS).map(([g, v]) => `<option value="${g}">${esc(v.nome)}</option>`).join('');
+
+        const regioes = [...new Set(registros.map(regiaoDe).filter(Boolean))].sort();
+        $('centro_custo').innerHTML = '<option value="">Todos</option>' +
+            regioes.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+
+        const meses = [...new Set(registros.map(r => mesDoRegistro(r.data_inspecao)).filter(Boolean))].sort().reverse();
+        $('mes').innerHTML = '<option value="">Todos</option>' +
+            meses.map(m => `<option value="${m}">${rotuloMes(m)}</option>`).join('');
     }
+
     function filtradas() {
-        const st = MS.valores($('fStatus')), gr = MS.valores($('fGrupo')), q = semAcento($('fBusca').value);
+        const st = MS.valores($('fStatus')), gr = MS.valores($('fGrupo'));
+        const rg = MS.valores($('centro_custo')), meses = MS.valores($('mes'));
+        const q = semAcento($('fBusca').value);
+        let ini = $('periodoIni').value, fim = $('periodoFim').value;
+        if (ini && fim && ini > fim) [ini, fim] = [fim, ini];   // se inverteu as datas, corrige
+
         return ncs.filter(nc => {
+            const r = nc.reg;
             if (st.length && !st.includes(statusDe(nc))) return false;
             if (gr.length && !gr.includes(nc.grupo)) return false;
+            if (rg.length && !rg.includes(regiaoDe(r))) return false;
+            if (meses.length && !meses.includes(mesDoRegistro(r.data_inspecao))) return false;
+            if (ini || fim) {
+                const d = diaDoRegistro(r.data_inspecao);
+                if (!d) return false;
+                if (ini && !fim) {
+                    // só a data inicial informada: filtra exatamente aquele dia
+                    if (d !== ini) return false;
+                } else {
+                    if (ini && d < ini) return false;
+                    if (fim && d > fim) return false;
+                }
+            }
             if (q) {
-                const texto = semAcento([nc.reg.lider, nc.reg.projeto, nc.reg.uf, rotuloGrupo(nc),
-                    nc.nome, nc.dados.desc].join(' '));
+                const texto = semAcento([r.lider, r.projeto, r.uf, rotuloGrupo(nc), nc.nome, nc.dados.desc].join(' '));
                 if (!texto.includes(q)) return false;
             }
             return true;
         });
     }
 
-    function render() {
+    /* ===== Filtros no cabeçalho da tabela (mesmo padrão do painel) ===== */
+    const OPCOES_SEV = ['Crítica', 'Alta', 'Média', 'Baixa'];
+    const OPCOES_STATUS = ['Pendente', 'Em andamento', 'Concluída'];
+    const COLS_TAB = [
+        { k: 'data',    get: (nc) => formatarData(nc.reg.data_inspecao), ordem: 'data' },
+        { k: 'lider',   get: (nc) => String(nc.reg.lider ?? '').trim() },
+        { k: 'projeto', get: (nc) => String(nc.reg.projeto ?? '').trim() },
+        { k: 'uf',      get: (nc) => String(nc.reg.uf ?? '').trim() },
+        { k: 'item',    get: (nc) => nc.nome, match: (nc) => nc.nome + ' ' + rotuloGrupo(nc) },
+        { k: 'sev',     get: (nc) => String(nc.dados.sev ?? '').trim(), fixo: OPCOES_SEV },
+        { k: 'desc',    get: (nc) => String(nc.dados.desc ?? '').trim(), semLista: true },
+        { k: 'status',  get: (nc) => ROTULO[statusDe(nc)], fixo: OPCOES_STATUS },
+        { k: 'abrir',   sem: true }
+    ];
+
+    const opcoesCol = {};
+    function montarLinhaFiltros() {
+        $('linhaFiltros').innerHTML = COLS_TAB.map(c => c.sem ? '<th></th>' :
+            `<th><input type="text" class="filtro-col${c.semLista ? ' sem-seta' : ''}" data-k="${c.k}"
+                placeholder="Filtrar..." autocomplete="off" aria-label="Filtrar coluna ${esc(c.k)}"></th>`
+        ).join('');
+        const p = document.createElement('div');
+        p.id = 'cbPainel';
+        document.body.appendChild(p);
+        ajustarStickyFiltros();
+    }
+    // Guarda os valores existentes de cada coluna (após os filtros do topo)
+    function atualizarListasFiltro() {
+        COLS_TAB.forEach(c => {
+            if (c.sem || c.semLista) return;
+            let valores;
+            if (c.fixo) {
+                valores = c.fixo;
+            } else {
+                const set = new Set();
+                ultFiltradas.forEach(nc => { const v = c.get(nc); if (v) set.add(v); });
+                valores = [...set];
+                if (c.ordem === 'data') valores.sort((a, b) => b.split('/').reverse().join('').localeCompare(a.split('/').reverse().join('')));
+                else valores.sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+            }
+            opcoesCol[c.k] = valores;
+        });
+        if (cbInput) cbAbrir(cbInput);   // se a lista estiver aberta, atualiza
+    }
+    // Mantém a linha de filtros logo abaixo da linha de títulos (cabeçalho fixo)
+    function ajustarStickyFiltros() {
+        const tr = document.querySelector('#tabelaNcs thead tr');
+        if (tr) $('tabelaNcs').style.setProperty('--h-cab', tr.offsetHeight + 'px');
+    }
+
+    /* ===== Lista suspensa própria dos filtros (compacta e alinhada) ===== */
+    let cbInput = null, cbIdx = -1;
+    function cbFechar() {
+        $('cbPainel').style.display = 'none';
+        cbInput = null; cbIdx = -1;
+    }
+    function cbPosicionar() {
+        if (!cbInput) return;
+        const p = $('cbPainel'), r = cbInput.getBoundingClientRect();
+        p.style.left = r.left + 'px';
+        p.style.top = (r.bottom + 2) + 'px';
+        p.style.minWidth = r.width + 'px';
+        p.style.maxWidth = '320px';
+    }
+    function cbAbrir(inp) {
+        const col = COLS_TAB.find(c => c.k === inp.dataset.k);
+        if (!col || col.semLista) return;      // colunas de texto livre (ex.: descrição) não abrem lista
+        cbInput = inp;
+        const p = $('cbPainel');
+        const q = semAcento(inp.value);
+        const ops = (opcoesCol[inp.dataset.k] || []).filter(v => !q || semAcento(v).includes(q)).slice(0, 200);
+        let h = inp.value ? '<div class="cb-limpar" data-v="">Limpar filtro</div>' : '';
+        h += ops.length
+            ? ops.map(v => `<div data-v="${esc(v)}">${esc(v)}</div>`).join('')
+            : '<div class="cb-vazio">Sem valores</div>';
+        p.innerHTML = h;
+        cbIdx = -1;
+        p.style.display = 'block';
+        cbPosicionar();
+    }
+    function cbEscolher(v) {
+        if (!cbInput) return;
+        cbInput.value = v;
+        cbFechar();
+        renderTabela();
+    }
+    function cbMover(delta) {
+        const itens = [...$('cbPainel').querySelectorAll('[data-v]')];
+        if (!itens.length) return;
+        cbIdx = Math.max(0, Math.min(itens.length - 1, cbIdx + delta));
+        itens.forEach((el, i) => el.classList.toggle('sel', i === cbIdx));
+        itens[cbIdx].scrollIntoView({ block: 'nearest' });
+    }
+
+    function filtrosDaTabela() {
+        const out = [];
+        document.querySelectorAll('#linhaFiltros .filtro-col').forEach(inp => {
+            const v = semAcento(inp.value);
+            inp.classList.toggle('ativo', v !== '');
+            if (v) out.push({ k: inp.dataset.k, v });
+        });
+        return out;
+    }
+    function limparFiltrosTabela() {
+        document.querySelectorAll('#linhaFiltros .filtro-col').forEach(inp => { inp.value = ''; });
+        renderTabela();
+    }
+
+    function renderResumo() {
         const cont = { pendente: 0, andamento: 0, concluida: 0 };
-        ncs.forEach(nc => cont[statusDe(nc)]++);
+        ultFiltradas.forEach(nc => cont[statusDe(nc)]++);
         $('resumo').innerHTML =
             `<span class="selo pendente">${cont.pendente} pendentes</span>` +
             `<span class="selo andamento">${cont.andamento} em andamento</span>` +
             `<span class="selo concluida">${cont.concluida} concluídas</span>`;
+    }
 
-        const lista = filtradas();
-        $('contagem').textContent = lista.length + (lista.length === 1 ? ' não conformidade' : ' não conformidades');
+    function renderTabela() {
+        const filtrosCol = filtrosDaTabela();
+        $('btnLimparTabela').hidden = !filtrosCol.length;
 
-        if (!lista.length) {
+        let linhas = ultFiltradas.slice();
+        if (filtrosCol.length) {
+            const defs = filtrosCol.map(f => ({ c: COLS_TAB.find(c => c.k === f.k), v: f.v }));
+            linhas = linhas.filter(nc => defs.every(d => semAcento((d.c.match || d.c.get)(nc)).includes(d.v)));
+        }
+        linhas.sort((a, b) =>
+            chaveData(b.reg.data_inspecao) - chaveData(a.reg.data_inspecao) ||
+            String(b.reg.criado_em ?? '').localeCompare(String(a.reg.criado_em ?? '')) ||
+            b.reg._linha - a.reg._linha
+        );
+
+        const n = linhas.length, total = ultFiltradas.length;
+        $('contagem').textContent = filtrosCol.length
+            ? n + ' de ' + total + (total === 1 ? ' não conformidade' : ' não conformidades')
+            : n + (n === 1 ? ' não conformidade' : ' não conformidades');
+
+        if (!n) {
             $('listaNcs').innerHTML = '<tr><td colspan="9" class="vazio">Nenhuma não conformidade encontrada.</td></tr>';
             return;
         }
 
-        $('listaNcs').innerHTML = lista.map(nc => {
+        $('listaNcs').innerHTML = linhas.map(nc => {
             const st = statusDe(nc);
             const r = nc.reg, d = nc.dados;
             return `<tr>
@@ -384,6 +598,14 @@
         }).join('');
     }
 
+    function render() {
+        ultFiltradas = filtradas();
+        renderResumo();
+        atualizarListasFiltro();
+        renderTabela();
+        ajustarStickyFiltros();
+    }
+
     const ORIENTACOES = [
         'Por que o problema aconteceu? Responda com um fato observado, não uma opinião. Ex.: A APR não foi renovada antes de iniciar a atividade.',
         'Por que a resposta do 1º porquê aconteceu? Parta sempre da resposta anterior. Ex.: Ninguém conferiu a data de validade antes de liberar a equipe.',
@@ -393,7 +615,7 @@
     ];
     const ORIENTACAO_EXTRA = 'Mais um porquê: pergunte novamente por que a resposta anterior aconteceu. Pare quando a resposta for uma falha de processo que você consegue corrigir.';
 
-    const lista = $('porques');
+    const listaPorques = $('porques');
 
     function criarPorque(extra, valor) {
         const li = document.createElement('li');
@@ -408,12 +630,12 @@
                 <textarea></textarea>
             </div>`;
         li.querySelector('textarea').value = valor || '';
-        lista.appendChild(li);
+        listaPorques.appendChild(li);
         numerar();
     }
 
     function numerar() {
-        [...lista.children].forEach((li, i) => {
+        [...listaPorques.children].forEach((li, i) => {
             const n = i + 1, ta = li.querySelector('textarea'), lb = li.querySelector('label');
             li.querySelector('.num').textContent = n;
             ta.id = 'porque' + n;
@@ -442,7 +664,7 @@
                 ${vazio(d.mot) ? '' : `<dt>Por que não resolveu?</dt><dd>${esc(d.mot)}</dd>`}
                 <dt>Atividade paralisada</dt><dd>${esc(d.par || '—')}</dd>
             </dl>`;
-        lista.innerHTML = '';
+        listaPorques.innerHTML = '';
         const salvos = a ? a.porques : [];
         const total = Math.max(5, salvos.length);
         for (let i = 0; i < total; i++) criarPorque(i >= 5, salvos[i]);
@@ -464,7 +686,7 @@
             registro_id: nc.regId,
             item: rotuloGrupo(nc) + ' - ' + nc.nome,
             problema: $('problema').value.trim(),
-            porques: [...lista.querySelectorAll('textarea')].map(t => t.value.trim()),
+            porques: [...listaPorques.querySelectorAll('textarea')].map(t => t.value.trim()),
             raiz: $('raiz').value.trim(),
             solucao: $('solucao').value.trim()
         };
@@ -485,9 +707,54 @@
         }
     }
 
-    ['fStatus', 'fGrupo'].forEach(id => $(id).addEventListener('change', render));
+    /* ===== Eventos: filtros do topo ===== */
+    $('btnLimpar').addEventListener('click', () => {
+        ['mes', 'centro_custo', 'fStatus', 'fGrupo'].forEach(id => MS.limpar($(id)));
+        $('periodoIni').value = '';
+        $('periodoFim').value = '';
+        $('fBusca').value = '';
+        render();
+    });
+    document.querySelectorAll('.filtros select').forEach(el => el.addEventListener('change', render));
+    ['periodoIni', 'periodoFim'].forEach(id =>
+        ['change', 'input'].forEach(ev => $(id).addEventListener(ev, render)));
     $('fBusca').addEventListener('input', render);
 
+    /* ===== Eventos: filtros por coluna da tabela (digitar ou escolher na lista) ===== */
+    montarLinhaFiltros();
+    let tmrFiltroTab = null;
+    const linhaFil = $('linhaFiltros');
+    linhaFil.addEventListener('focusin', (e) => { if (e.target.classList.contains('filtro-col')) cbAbrir(e.target); });
+    linhaFil.addEventListener('click',   (e) => { if (e.target.classList.contains('filtro-col')) cbAbrir(e.target); });
+    linhaFil.addEventListener('focusout', cbFechar);
+    linhaFil.addEventListener('input', (e) => {
+        if (e.target.classList.contains('filtro-col')) cbAbrir(e.target);
+        clearTimeout(tmrFiltroTab);
+        tmrFiltroTab = setTimeout(renderTabela, 150);
+    });
+    linhaFil.addEventListener('keydown', (e) => {
+        if (!cbInput) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); cbMover(1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); cbMover(-1); }
+        else if (e.key === 'Escape') { cbFechar(); }
+        else if (e.key === 'Enter') {
+            const sel = $('cbPainel').querySelectorAll('[data-v]')[cbIdx];
+            if (sel) { e.preventDefault(); cbEscolher(sel.dataset.v); } else cbFechar();
+        }
+    });
+    // mousedown com preventDefault: o campo não perde o foco ao clicar na lista
+    $('cbPainel').addEventListener('mousedown', (e) => e.preventDefault());
+    $('cbPainel').addEventListener('click', (e) => {
+        const it = e.target.closest('[data-v]');
+        if (it) cbEscolher(it.dataset.v);
+    });
+    window.addEventListener('scroll', (e) => {
+        if (cbInput && !$('cbPainel').contains(e.target)) cbPosicionar();
+    }, true);
+    window.addEventListener('resize', () => { cbPosicionar(); ajustarStickyFiltros(); });
+    $('btnLimparTabela').addEventListener('click', limparFiltrosTabela);
+
+    /* ===== Eventos: tabela e modal ===== */
     $('listaNcs').addEventListener('click', (e) => {
         const b = e.target.closest('.btn-abrir');
         if (b) abrirAnalise(b.dataset.id);
@@ -495,10 +762,10 @@
 
     $('btnAdicionar').addEventListener('click', () => {
         criarPorque(true, '');
-        lista.lastElementChild.querySelector('textarea').focus();
+        listaPorques.lastElementChild.querySelector('textarea').focus();
     });
 
-    lista.addEventListener('click', (e) => {
+    listaPorques.addEventListener('click', (e) => {
         const b = e.target.closest('.remover');
         if (!b) return;
         b.closest('.porque').remove();
@@ -513,7 +780,6 @@
     });
 
     async function iniciar() {
-        montarFiltroGrupo();
         try {
             let matrizEhs, matrizAnalises = [];
             if (modoExemplo) {
@@ -522,8 +788,10 @@
             } else {
                 [matrizEhs, matrizAnalises] = await Promise.all([apiGet(''), apiGet('analises')]);
             }
-            ncs = construirNcs(matrizEhs ? matrizParaObjetos(matrizEhs) : []);
+            registros = matrizEhs ? ACESSO.filtrar(matrizParaObjetos(matrizEhs)) : [];
+            ncs = construirNcs(registros);
             analises = analisesParaMapa(matrizAnalises);
+            montarSelects();
             render();
         } catch (err) {
             console.error(err);
